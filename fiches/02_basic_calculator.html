@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Basic Calculator Rust</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --bg:#f5f6f7; --surface:#ffffff; --surface-2:#eceef1; --ink:#1b2127; --ink-2:#4a545e; --muted:#6c7680;
+  --line:#d9dde2; --accent:#b4461a; --accent-soft:#f6e3d8; --accent-ink:#8a3310;
+  --code-bg:#1d2329; --code-ink:#e4e7ea; --k:#ff9f6b; --t:#7fd1c7; --s:#c3e88d; --c:#7c8a96; --n:#f2c46d; --m:#b6a6ff;
+  --ok:#2f7d4f; --ok-soft:#e1f1e7; --warn:#9a6a00; --warn-soft:#fbefd0; --bad:#b0302c; --bad-soft:#f8e0de;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"IBM Plex Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#13171b; --surface:#1a1f24; --surface-2:#232a30; --ink:#e6e9ec; --ink-2:#b3bcc4; --muted:#8a949d;
+    --line:#2e363d; --accent:#f08a5a; --accent-soft:#3a2419; --accent-ink:#ffb48f;
+    --code-bg:#0e1215; --ok:#6fcf97; --ok-soft:#18301f; --warn:#e8bd55; --warn-soft:#33290f; --bad:#f08a86; --bad-soft:#3a1c1b;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#13171b; --surface:#1a1f24; --surface-2:#232a30; --ink:#e6e9ec; --ink-2:#b3bcc4; --muted:#8a949d;
+  --line:#2e363d; --accent:#f08a5a; --accent-soft:#3a2419; --accent-ink:#ffb48f;
+  --code-bg:#0e1215; --ok:#6fcf97; --ok-soft:#18301f; --warn:#e8bd55; --warn-soft:#33290f; --bad:#f08a86; --bad-soft:#3a1c1b;
+}
+*{box-sizing:border-box}
+main a,footer a{color:var(--accent-ink);text-underline-offset:2px}
+code,pre,.tree,.bits{font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{background:var(--bg);color:var(--ink);font:16px/1.65 var(--body);padding-inline:16px}
+.shell{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:230px minmax(0,1fr);gap:48px;padding-block:40px 80px}
+@media (max-width:900px){.shell{grid-template-columns:minmax(0,1fr);gap:24px;padding-block:24px 60px}}
+
+/* nav */
+nav.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px);align-self:start;font-size:14px}
+nav.toc .brand{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px}
+nav.toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+nav.toc a{display:block;color:var(--ink-2);text-decoration:none;padding:5px 10px;border-radius:6px;border-left:2px solid transparent}
+nav.toc a:hover{background:var(--surface-2);color:var(--ink)}
+nav.toc a.active{color:var(--accent-ink);border-left-color:var(--accent);background:var(--accent-soft);border-radius:0 6px 6px 0}
+nav.toc .sub a{padding-left:22px;font-family:var(--mono);font-size:12.5px}
+@media (max-width:900px){
+  nav.toc{position:static}
+  nav.toc ol{flex-direction:row;flex-wrap:wrap;gap:6px}
+  nav.toc .sub{display:none}
+  nav.toc a{border:1px solid var(--line);border-radius:999px;padding:4px 12px}
+  nav.toc a.active{border-radius:999px;border-color:var(--accent)}
+}
+
+main{min-width:0}
+header.hero{padding-bottom:28px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.eyebrow{font-family:var(--mono);font-size:12.5px;color:var(--accent);letter-spacing:.05em}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(34px,5vw,52px);line-height:1.05;margin:8px 0 14px;text-wrap:balance;letter-spacing:-.01em}
+.lede{color:var(--ink-2);max-width:62ch;margin:0;font-size:17px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--mono);font-size:12px;padding:3px 10px;border-radius:999px;background:var(--surface-2);color:var(--ink-2)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+
+section{padding-top:44px}
+h2{font-family:var(--display);font-weight:800;font-size:clamp(24px,3vw,30px);line-height:1.15;margin:0 0 6px;text-wrap:balance}
+h2 .num{font-family:var(--mono);font-weight:400;font-size:.55em;color:var(--accent);vertical-align:.35em;margin-right:8px}
+h3{font-family:var(--display);font-weight:600;font-size:20px;margin:28px 0 8px;text-wrap:balance}
+h4{font-size:15px;font-weight:600;margin:20px 0 6px}
+p,li{max-width:70ch}
+p{margin:10px 0}
+ul,ol{padding-left:22px;margin:8px 0}
+li{margin:4px 0}
+.intro{color:var(--ink-2)}
+strong{font-weight:600}
+code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);padding:1px 5px;border-radius:4px}
+pre{margin:14px 0;background:var(--code-bg);color:var(--code-ink);border-radius:10px;padding:16px 18px;overflow-x:auto;font:13.5px/1.6 var(--mono)}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.tk{color:var(--k)} .tt{color:var(--t)} .ts{color:var(--s)} .tc{color:var(--c);font-style:italic} .tn{color:var(--n)} .tm{color:var(--m)}
+
+.tablewrap{overflow-x:auto;margin:14px 0;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;background:var(--surface-2);font-size:13px;color:var(--ink-2)}
+tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:13px;white-space:nowrap}
+
+.say{margin:18px 0;padding:14px 18px;background:var(--accent-soft);border-radius:10px;color:var(--ink)}
+.say b{display:block;font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:4px;font-weight:600}
+.warn{margin:14px 0;padding:12px 16px;background:var(--warn-soft);border-radius:10px}
+.warn b{color:var(--warn)}
+
+/* principles */
+.principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:18px 0}
+.pr{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pr .i{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.pr h4{margin:4px 0 6px;font-size:15.5px}
+.pr p{margin:0;font-size:14px;color:var(--ink-2)}
+
+/* pipeline */
+.pipeline{display:flex;flex-direction:column;gap:0;margin:18px 0;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+.stage{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.stage:last-child{border-bottom:0}
+.stage .n{font-family:var(--mono);color:var(--muted);font-size:13px;padding-top:2px}
+.stage h4{margin:0}
+.stage p{margin:2px 0 0;font-size:14px;color:var(--ink-2)}
+.stage.hl{background:var(--accent-soft)}
+.stage.hl .n{color:var(--accent-ink)}
+.err{font-family:var(--mono);font-size:12px;color:var(--bad);white-space:nowrap}
+
+/* exercises */
+details.ex{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin:12px 0}
+details.ex[open]{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+details.ex>summary{cursor:pointer;list-style:none;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 18px}
+details.ex>summary::-webkit-details-marker{display:none}
+details.ex>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:12px}
+.exid{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:600}
+.extitle{font-weight:600}
+.extitle small{display:block;font-weight:400;color:var(--muted);font-size:13.5px}
+.chev{color:var(--muted);transition:transform .2s}
+details[open] .chev{transform:rotate(90deg)}
+.exbody{padding:0 18px 18px;border-top:1px solid var(--line)}
+.flag{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:2px}
+.flag.w{background:var(--warn-soft);color:var(--warn)}
+.tools{display:flex;gap:8px;margin:14px 0 4px;flex-wrap:wrap}
+button{font:500 13px var(--body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{background:var(--surface-2)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ring */
+.ring{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:24px;align-items:center;margin:16px 0}
+@media (max-width:640px){.ring{grid-template-columns:minmax(0,1fr)}}
+.ring svg{width:100%;max-width:260px;height:auto}
+.bits{font-family:var(--mono);font-size:14px;display:flex;gap:3px;flex-wrap:wrap}
+.bits span{width:24px;height:28px;display:grid;place-items:center;border-radius:4px;background:var(--surface-2)}
+.bits span.sign{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+
+/* quiz */
+.quiz{counter-reset:q;display:flex;flex-direction:column;gap:8px;margin-top:14px}
+details.q{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+details.q>summary{cursor:pointer;list-style:none;padding:12px 16px;display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:10px;align-items:baseline}
+details.q>summary::-webkit-details-marker{display:none}
+details.q>summary::before{counter-increment:q;content:counter(q);font-family:var(--mono);font-size:13px;color:var(--accent)}
+details.q>summary::after{content:"Réponse";font-size:12px;color:var(--muted);font-family:var(--mono)}
+details.q[open]>summary::after{content:"Masquer"}
+details.q>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
+details.q .a{padding:0 16px 14px 58px;color:var(--ink-2)}
+@media (max-width:520px){details.q .a{padding-left:16px}}
+footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+</style>
+
+</head>
+<body>
+<div class="shell">
+<nav class="toc" aria-label="Sommaire">
+  <div class="brand">Chapitre 02</div>
+  <ol>
+    <li><a href="#principes">Les 5 principes</a></li>
+    <li><a href="#compilateur">Compilateur &amp; checkers</a></li>
+    <li><a href="#borrow">Borrow checker</a></li>
+    <li><a href="#syntaxe">Syntaxe</a></li>
+    <li><a href="#exercices">Exercices</a></li>
+    <li class="sub"><a href="#ex00">00 intro</a></li>
+    <li class="sub"><a href="#ex01">01 integers</a></li>
+    <li class="sub"><a href="#ex02">02 variables</a></li>
+    <li class="sub"><a href="#ex03">03 if_else</a></li>
+    <li class="sub"><a href="#ex04">04 panics</a></li>
+    <li class="sub"><a href="#ex05">05 factorial</a></li>
+    <li class="sub"><a href="#ex06">06 while</a></li>
+    <li class="sub"><a href="#ex07">07 for</a></li>
+    <li class="sub"><a href="#ex08">08 overflow</a></li>
+    <li class="sub"><a href="#ex09">09 saturating</a></li>
+    <li class="sub"><a href="#ex10">10 as_casting</a></li>
+    <li><a href="#overflow">Overflow</a></li>
+    <li><a href="#tests">Tests</a></li>
+    <li><a href="#oral">Questions d'oral</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">100 exercises to learn Rust · 02_basic_calculator</div>
+  <h1>Fiche synthèse&nbsp;: Basic Calculator</h1>
+  <p class="lede">L'objectif est de savoir <strong>expliquer</strong> chaque concept à partir des premiers principes, pas seulement de faire passer les tests. Pour chaque notion : le principe, la syntaxe, ce que tu as fait, puis les pièges.</p>
+  <div class="meta">
+    <span class="chip">11 exercices</span>
+    <span class="chip ok">tous les tests passent</span>
+    <span class="chip">commit 941af42</span>
+  </div>
+</header>
+
+<!-- ============ PRINCIPES ============ -->
+<section id="principes">
+  <h2><span class="num">§0</span>Les 5 principes de Rust</h2>
+  <p class="intro">Tout le chapitre découle de ces cinq idées. Si tu sais les expliquer, tu sais expliquer le chapitre.</p>
+  <div class="principles">
+    <div class="pr"><span class="i">principe 1</span><h4>Tout a un type connu à la compilation</h4><p>Typage statique. Le compilateur refuse ce qu'il ne peut pas typer (ex.&nbsp;09).</p></div>
+    <div class="pr"><span class="i">principe 2</span><h4>Rien n'est implicite</h4><p><code>u8</code> ≠ <code>u32</code> (ex.&nbsp;01), pas de truthy/falsy (ex.&nbsp;03), <code>as</code> obligatoire (ex.&nbsp;10).</p></div>
+    <div class="pr"><span class="i">principe 3</span><h4>Immuable par défaut</h4><p>Un <code>let</code> ne se modifie pas : il faut <code>mut</code> (ex.&nbsp;06, 07).</p></div>
+    <div class="pr"><span class="i">principe 4</span><h4>Presque tout est une expression</h4><p>Dernière ligne sans <code>;</code> = valeur de retour. <code>if</code> renvoie une valeur.</p></div>
+    <div class="pr"><span class="i">principe 5</span><h4>Pas d'erreur silencieuse sans ton accord</h4><p><code>panic!</code> (ex.&nbsp;04), overflow = panic en dev sauf si tu choisis autre chose (ex.&nbsp;08, 09).</p></div>
+  </div>
+  <div class="say"><b>À savoir dire</b>« Rust déplace un maximum d'erreurs de l'exécution vers la compilation. Le compilateur agit comme un vérificateur de preuves : si le code compile, toute une classe de bugs (types incohérents, variables non initialisées, mutations non prévues, accès mémoire invalides) est impossible. »</div>
+</section>
+
+<!-- ============ COMPILATEUR ============ -->
+<section id="compilateur">
+  <h2><span class="num">§1</span>Le compilateur et ses checkers</h2>
+  <p class="intro">Quand tu lances <code>cargo build</code> ou <code>cargo test</code>, <code>rustc</code> fait passer ton code par plusieurs vérifications successives. Tu en as croisé plusieurs dans ce chapitre.</p>
+  <div class="pipeline">
+    <div class="stage"><span class="n">1</span><div><h4>Parsing</h4><p>La syntaxe est-elle correcte ? Accolades, <code>;</code>, mots-clés.</p></div></div>
+    <div class="stage"><span class="n">2</span><div><h4>Résolution de noms</h4><p><code>factorial</code> existe-t-il ? Vers quoi pointe <code>use crate::speed</code> ?</p></div></div>
+    <div class="stage hl"><span class="n">3</span><div><h4>Type checker</h4><p>Chaque expression a-t-elle <strong>un</strong> type cohérent ? <span class="err">E0308</span> <span class="err">E0689</span></p></div></div>
+    <div class="stage hl"><span class="n">4</span><div><h4>Borrow checker</h4><p>Initialisation, mutabilité, ownership, emprunts respectés ? <span class="err">E0381</span> <span class="err">E0384</span> <span class="err">E0382</span></p></div></div>
+    <div class="stage"><span class="n">5</span><div><h4>Lints</h4><p>Avertissements : <code>unused import</code>, <code>overflowing_literals</code>, <code>dead_code</code>…</p></div></div>
+    <div class="stage"><span class="n">6</span><div><h4>Code machine + checks à l'exécution</h4><p>Overflow, division par zéro → <code>panic</code>.</p></div></div>
+  </div>
+
+  <h3>Le type checker : erreurs rencontrées</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Erreur</th><th>Où</th><th>Explication</th></tr></thead>
+    <tbody>
+      <tr><td><code>E0308</code> expected <code>u32</code>, found <code>u8</code></td><td>ex.&nbsp;01</td><td><code>a + b * multiplier</code> avec <code>multiplier: u8</code> : les opérateurs exigent <strong>deux opérandes du même type</strong>. Aucune promotion automatique.</td></tr>
+      <tr><td><code>E0308</code> expected <code>bool</code>, found integer</td><td>cours 03</td><td><code>if number { }</code> est interdit : la condition doit être un <code>bool</code>.</td></tr>
+      <tr><td><code>E0689</code> ambiguous numeric type <code>{integer}</code></td><td>ex.&nbsp;09</td><td>Appel de méthode sur un entier dont le type n'est pas encore fixé. Voir ci-dessous.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Inférence : pourquoi <code>let mut result: u32 = 1;</code> (ex.&nbsp;09)</h3>
+  <ul>
+    <li>Un littéral <code>1</code> seul a un type <strong>provisoire</strong> <code>{integer}</code> : « un entier, je ne sais pas encore lequel ».</li>
+    <li>Le compilateur fixe ce type <strong>en regardant les usages</strong> (unification).</li>
+    <li><strong>Mais</strong> pour appeler une <strong>méthode</strong> (<code>result.saturating_mul(i)</code>), il doit savoir <em>tout de suite</em> sur quel type la chercher : <code>u8::saturating_mul</code> ? <code>u32::saturating_mul</code> ? Il ne peut pas attendre, d'où <strong>E0689</strong>.</li>
+    <li>À l'ex.&nbsp;07 (<code>let mut res = 1; res *= i;</code>), pas besoin d'annotation : <code>*=</code> est un opérateur, et <code>i: u32</code> plus le <code>-&gt; u32</code> suffisent.</li>
+    <li>S'il n'y a <strong>aucun</strong> indice, le type par défaut est <code>i32</code>.</li>
+  </ul>
+  <div class="say"><b>Règle</b>Annotations <strong>obligatoires</strong> pour les paramètres et le type de retour : la signature est un contrat lisible sans lire le corps, et ça accélère la compilation. <strong>Optionnelles</strong> pour les <code>let</code> quand le contexte suffit.</div>
+</section>
+
+<!-- ============ BORROW ============ -->
+<section id="borrow">
+  <h2><span class="num">§1.3</span>Le borrow checker</h2>
+  <p class="intro">L'ownership et le borrowing ne sont présentés officiellement qu'au chapitre 03 (<code>06_ownership</code>, <code>10_references_in_memory</code>), mais le borrow checker a <strong>déjà</strong> travaillé ici. C'est lui qui vérifie les règles d'<strong>accès aux valeurs</strong> : initialisation, mutabilité, propriété, emprunts.</p>
+
+  <h3>Les 3 règles de l'ownership</h3>
+  <ol>
+    <li>Chaque valeur a <strong>un seul propriétaire</strong> (une variable).</li>
+    <li>Quand le propriétaire sort de sa portée (<code>}</code>), la valeur est <strong>détruite</strong> (drop). Pas de garbage collector.</li>
+    <li>On peut <strong>emprunter</strong> une valeur via une référence : soit <strong>N références partagées</strong> <code>&amp;T</code> (lecture seule), soit <strong>une seule référence mutable</strong> <code>&amp;mut T</code>, <strong>jamais les deux en même temps</strong>.</li>
+  </ol>
+  <p>C'est le principe <strong>« aliasing XOR mutation »</strong>. En plus, une référence ne doit jamais vivre plus longtemps que la valeur pointée (<strong>lifetimes</strong>).</p>
+
+  <h3>Où tu l'as vu sans le savoir</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Situation</th><th>Ce qui est vérifié</th><th>Si violé</th></tr></thead>
+    <tbody>
+      <tr><td><code>let x: u32; let y = x + 1;</code></td><td>Une variable doit être <strong>initialisée</strong> avant d'être lue.</td><td class="err">E0381</td></tr>
+      <tr><td><code>let sum = 0; sum += i;</code> (ex.&nbsp;06)</td><td>On ne réassigne pas une variable <strong>non <code>mut</code></strong>.</td><td class="err">E0384</td></tr>
+      <tr><td><code>fn factorial(mut n: u32)</code></td><td><code>n</code> est une variable locale ; <code>mut</code> rend <strong>ce nom</strong> modifiable.</td><td>—</td></tr>
+      <tr><td><code>fn intro() -&gt; &amp;'static str</code></td><td>La référence retournée doit rester valide ; <code>'static</code> = vit tout le programme (texte gravé dans le binaire).</td><td>erreur de lifetime</td></tr>
+      <tr><td><code>let y = x;</code> puis <code>x</code>, avec <code>x: u32</code></td><td>OK : <code>u32</code> est <strong><code>Copy</code></strong>.</td><td>—</td></tr>
+      <tr><td><code>let t = s;</code> puis <code>s</code>, avec <code>s: String</code></td><td><code>s</code> a été <strong>déplacé</strong> (move), il n'est plus propriétaire.</td><td class="err">E0382</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3><code>Copy</code> ou move : pourquoi tes entiers « marchent tout seuls »</h3>
+  <ul>
+    <li>Les primitifs (<code>u32</code>, <code>i8</code>, <code>bool</code>, <code>char</code>…) sont <strong><code>Copy</code></strong> : petits, sur la pile, copiés bit à bit. Passer <code>n</code> à <code>factorial(n - 1)</code> ou appeler <code>start.abs_diff(end)</code> <strong>copie</strong> la valeur. L'original reste utilisable.</li>
+    <li>Un <code>String</code> possède de la mémoire sur le tas, donc il n'est pas <code>Copy</code> : une affectation <strong>déplace</strong> la propriété. C'est là que le borrow checker devient visible (chapitre 03).</li>
+  </ul>
+<pre><code><span class="tk">let</span> x: <span class="tt">u32</span> = <span class="tn">42</span>;
+<span class="tk">let</span> y = x;                  <span class="tc">// copie</span>
+<span class="tm">println!</span>(<span class="ts">"{x} {y}"</span>);        <span class="tc">// ✅ x toujours valide</span>
+
+<span class="tk">let</span> s = <span class="tt">String</span>::from(<span class="ts">"a"</span>);
+<span class="tk">let</span> t = s;                  <span class="tc">// move : t devient propriétaire</span>
+<span class="tm">println!</span>(<span class="ts">"{s}"</span>);            <span class="tc">// ❌ E0382 borrow of moved value: `s`</span></code></pre>
+
+  <h3>Ce qu'il faut savoir expliquer sur <code>mut</code></h3>
+  <ul>
+    <li><code>mut</code> est une propriété du <strong>nom</strong> (le binding), pas du type ni de la valeur.</li>
+    <li><code>fn f(mut n: u32)</code> : l'appelant passe une <strong>copie</strong>, la fonction modifie sa copie locale. L'appelant ne voit rien. Ce n'est <strong>pas</strong> un passage par référence.</li>
+    <li>Pour modifier la variable <em>de l'appelant</em> : <code>fn f(n: &amp;mut u32)</code> puis <code>*n -= 1;</code> (chapitre 03).</li>
+    <li>Pourquoi immuable par défaut ? « Aliasing XOR mutation » est bien plus facile à garantir si la mutation est <strong>explicite et rare</strong>. Et c'est plus lisible : un <code>let</code> sans <code>mut</code> ne changera jamais.</li>
+  </ul>
+  <div class="say"><b>À savoir dire</b>« Le borrow checker garantit à la compilation qu'aucune valeur n'est lue sans être initialisée, utilisée après avoir été déplacée ou détruite, ou modifiée pendant qu'un autre code la lit. C'est ce qui donne la sécurité mémoire sans garbage collector, sans coût à l'exécution. »</div>
+</section>
+
+<!-- ============ SYNTAXE ============ -->
+<section id="syntaxe">
+  <h2><span class="num">§2</span>Aide-mémoire de syntaxe</h2>
+<pre><code><span class="tc">// Commentaire simple</span>
+<span class="tc">/// Commentaire de doc (attaché à l'item suivant → cargo doc --open)</span>
+
+<span class="tc">// fn &lt;nom&gt;(&lt;param&gt;: &lt;Type&gt;, ...) -&gt; &lt;TypeRetour&gt; { &lt;corps&gt; }</span>
+<span class="tk">fn</span> compute(a: <span class="tt">u32</span>, b: <span class="tt">u32</span>) -&gt; <span class="tt">u32</span> {
+    <span class="tk">let</span> multiplier: <span class="tt">u32</span> = <span class="tn">4</span>;   <span class="tc">// let &lt;nom&gt;: &lt;Type&gt; = &lt;expr&gt;;</span>
+    a + b * multiplier         <span class="tc">// PAS de ; → valeur de retour</span>
+}
+
+<span class="tk">fn</span> rien() { }                  <span class="tc">// équivaut à fn rien() -&gt; () { }</span>
+
+<span class="tk">let mut</span> x = <span class="tn">0</span>;                 <span class="tc">// variable modifiable</span>
+x += <span class="tn">1</span>;                        <span class="tc">// += -= *= /= %=</span>
+
+<span class="tk">if</span> cond { .. } <span class="tk">else if</span> cond2 { .. } <span class="tk">else</span> { .. }
+<span class="tk">let</span> v = <span class="tk">if</span> cond { <span class="tn">1</span> } <span class="tk">else</span> { <span class="tn">2</span> };  <span class="tc">// if est une EXPRESSION, branches du même type</span>
+
+<span class="tk">while</span> cond { .. }
+<span class="tk">for</span> i <span class="tk">in</span> <span class="tn">1</span>..=n { .. }          <span class="tc">// inclusif</span>
+<span class="tk">for</span> i <span class="tk">in</span> <span class="tn">1</span>..n  { .. }          <span class="tc">// n exclu</span>
+
+<span class="tm">panic!</span>(<span class="ts">"message"</span>);             <span class="tc">// ! = macro</span>
+<span class="tm">todo!</span>()                        <span class="tc">// compile, mais panic à l'exécution</span>
+
+<span class="tn">42u64</span>          <span class="tc">// littéral typé par suffixe</span>
+<span class="tn">1_000_000</span>      <span class="tc">// underscores pour la lisibilité</span>
+x <span class="tk">as</span> <span class="tt">u64</span>       <span class="tc">// conversion explicite</span></code></pre>
+
+  <h3>Instruction ou expression : le rôle du <code>;</code></h3>
+  <ul>
+    <li><strong>Expression</strong> : produit une valeur (<code>a + b</code>, <code>if … { 1 } else { 2 }</code>, un bloc <code>{ … }</code>).</li>
+    <li><strong>Instruction</strong> : ne produit pas de valeur (<code>let x = 5;</code>, ou toute expression suivie de <code>;</code>).</li>
+    <li>Le <code>;</code> <strong>transforme une expression en instruction</strong> et jette sa valeur : le bloc vaut alors <code>()</code>.</li>
+    <li><code>return x</code> sert au retour <strong>anticipé</strong>. En fin de fonction, le style idiomatique est d'écrire juste <code>x</code>.</li>
+  </ul>
+<pre><code><span class="tk">fn</span> f() -&gt; <span class="tt">u32</span> { <span class="tn">5</span> }    <span class="tc">// ✅ renvoie 5</span>
+<span class="tk">fn</span> g() -&gt; <span class="tt">u32</span> { <span class="tn">5</span>; }   <span class="tc">// ❌ E0308 : le bloc vaut (), pas u32</span></code></pre>
+</section>
+
+<!-- ============ EXERCICES ============ -->
+<section id="exercices">
+  <h2><span class="num">§3</span>Les exercices un par un</h2>
+  <p class="intro">Clique sur un exercice pour voir ton code, le principe et les pièges.</p>
+  <div class="tools">
+    <button type="button" id="openAll">Tout ouvrir</button>
+    <button type="button" id="closeAll">Tout fermer</button>
+  </div>
+
+  <details class="ex" id="ex00">
+    <summary><span class="exid">00</span><span class="extitle">intro<small>Fonctions et <code>&amp;'static str</code></small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">fn</span> intro() -&gt; &amp;<span class="tk">'static</span> <span class="tt">str</span> {
+    <span class="ts">"I'm ready to build a calculator in Rust!"</span>
+}</code></pre>
+      <p><strong>Fait :</strong> compléter la chaîne.</p>
+      <p><strong>À expliquer :</strong> un littéral <code>"..."</code> est stocké dans le binaire. La fonction renvoie une <strong>référence</strong> (<code>&amp;</code>) vers du texte (<code>str</code>) dont la <strong>durée de vie</strong> est <code>'static</code>, c'est-à-dire tout le programme.</p>
+      <p><strong>Tests :</strong> <code>#[cfg(test)]</code> = module compilé seulement pour <code>cargo test</code> ; <code>#[test]</code> marque une fonction de test ; <code>assert_eq!(a, b)</code> panique si différent ; <code>use crate::intro</code> importe depuis la racine du crate.</p>
+    </div>
+  </details>
+
+  <details class="ex" id="ex01">
+    <summary><span class="exid">01</span><span class="extitle">integers<small>Types entiers, aucune conversion implicite</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">let</span> multiplier: <span class="tt">u32</span> = <span class="tn">4</span>;   <span class="tc">// était u8 → E0308</span>
+a + b * multiplier</code></pre>
+      <p><strong>Fait :</strong> passer <code>multiplier</code> de <code>u8</code> à <code>u32</code>.</p>
+      <p><strong>Principe :</strong> Rust refuse <code>u32 * u8</code> même si la conversion serait sans perte. <strong>Toute conversion est explicite.</strong></p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Bits</th><th>Signé</th><th>Non signé</th><th>Plage non signée</th><th>Plage signée</th></tr></thead>
+        <tbody>
+          <tr><td class="num">8</td><td><code>i8</code></td><td><code>u8</code></td><td class="num">0 → 255</td><td class="num">−128 → 127</td></tr>
+          <tr><td class="num">16</td><td><code>i16</code></td><td><code>u16</code></td><td class="num">0 → 65 535</td><td class="num">−32 768 → 32 767</td></tr>
+          <tr><td class="num">32</td><td><code>i32</code></td><td><code>u32</code></td><td class="num">0 → 4 294 967 295</td><td class="num">−2³¹ → 2³¹−1</td></tr>
+          <tr><td class="num">64</td><td><code>i64</code></td><td><code>u64</code></td><td class="num">0 → 2⁶⁴−1</td><td class="num">−2⁶³ → 2⁶³−1</td></tr>
+          <tr><td class="num">128</td><td><code>i128</code></td><td><code>u128</code></td><td class="num">0 → 2¹²⁸−1</td><td class="num">−2¹²⁷ → 2¹²⁷−1</td></tr>
+        </tbody>
+      </table></div>
+      <ul>
+        <li>Non signé sur n bits : <code>0 … 2ⁿ − 1</code>. Signé : <code>−2ⁿ⁻¹ … 2ⁿ⁻¹ − 1</code> (le bit de poids fort porte le signe, en complément à deux).</li>
+        <li>Opérateurs <code>+ - * / %</code>, priorité mathématique.</li>
+      </ul>
+      <div class="warn"><b>Piège :</b> <code>/</code> sur des entiers fait une <strong>division entière tronquée</strong> : <code>5 / 2 == 2</code>.</div>
+    </div>
+  </details>
+
+  <details class="ex" id="ex02">
+    <summary><span class="exid">02</span><span class="extitle">variables <span class="flag w">à nettoyer</span><small><code>let</code>, annotation, inférence</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">let</span> distance: <span class="tt">u32</span> = start.abs_diff(end);
+distance / time_elapsed</code></pre>
+      <p><strong>Fait :</strong> calculer la distance avec <code>abs_diff</code> (valeur absolue de la différence, jamais négative, donc jamais d'underflow). Solution attendue par le cours : <code>let distance = end - start;</code>.</p>
+      <p><strong>« Faut-il annoter <code>distance</code> ? »</strong> Non : <code>abs_diff</code> sur un <code>u32</code> renvoie un <code>u32</code>, le type est inféré. L'annotation est légale mais redondante.</p>
+      <p><strong>Test <code>case3</code> :</strong> <code>speed(10, 31, 10)</code> → <code>21 / 10 == 2</code> (division entière).</p>
+      <div class="warn"><b>À nettoyer :</b> <code>use std::path::absolute;</code> est inutile et déclenche un avertissement <code>unused import</code>. Sans doute ajouté par l'autocomplétion en tapant « abs ».</div>
+    </div>
+  </details>
+
+  <details class="ex" id="ex03">
+    <summary><span class="exid">03</span><span class="extitle">if_else<small>Branchements et booléens</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">fn</span> magic_number(n: <span class="tt">u32</span>) -&gt; <span class="tt">u32</span> {
+    <span class="tk">if</span> n % <span class="tn">2</span> == <span class="tn">0</span> {
+        <span class="tk">return</span> <span class="tn">12</span>
+    } <span class="tk">else if</span> n % <span class="tn">3</span> == <span class="tn">0</span> {
+        <span class="tk">return</span> <span class="tn">13</span>
+    } <span class="tk">else</span> {
+        <span class="tk">return</span> <span class="tn">17</span>
+    }
+}</code></pre>
+      <ul>
+        <li><strong>Principe :</strong> la condition doit être un <code>bool</code>. Pas de valeurs truthy/falsy comme en Python ou JavaScript.</li>
+        <li><strong>L'ordre des tests compte :</strong> <code>6</code> est pair <em>et</em> divisible par 3 ; le test <code>six</code> attend <code>12</code> parce que le premier <code>if</code> gagne.</li>
+        <li>Comparaisons : <code>== != &lt; &gt; &lt;= &gt;=</code>. Logique : <code>&amp;&amp; || !</code>.</li>
+      </ul>
+      <p><strong>Version idiomatique</strong> (<code>if</code> est une expression) :</p>
+<pre><code><span class="tk">fn</span> magic_number(n: <span class="tt">u32</span>) -&gt; <span class="tt">u32</span> {
+    <span class="tk">if</span> n % <span class="tn">2</span> == <span class="tn">0</span> { <span class="tn">12</span> } <span class="tk">else if</span> n % <span class="tn">3</span> == <span class="tn">0</span> { <span class="tn">13</span> } <span class="tk">else</span> { <span class="tn">17</span> }
+}</code></pre>
+    </div>
+  </details>
+
+  <details class="ex" id="ex04">
+    <summary><span class="exid">04</span><span class="extitle">panics <span class="flag w">bug caché</span><small>Erreur irrécupérable</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">if</span> time_elapsed == <span class="tn">0</span> {
+    <span class="tm">panic!</span>(<span class="ts">"The journey took no time at all. That's impossible!"</span>)
+}
+(end - start) / time_elapsed</code></pre>
+      <ul>
+        <li><strong>Principe :</strong> un <code>panic</code> est une erreur <strong>irrécupérable</strong>. Le thread s'arrête, la pile est déroulée (<em>unwinding</em>) et les valeurs sont détruites proprement.</li>
+        <li>Diviser par zéro panique déjà tout seul (<code>attempt to divide by zero</code>) ; ici on remplace ce message par un message <strong>métier</strong> clair.</li>
+        <li><strong>Test :</strong> <code>#[should_panic(expected = "...")]</code> réussit <strong>seulement si</strong> le code panique avec un message contenant ce texte.</li>
+        <li><code>panic!</code> est une macro de type <code>!</code> (« never ») : compatible avec n'importe quel type attendu, d'où la possibilité de la mettre dans un <code>if</code> sans <code>else</code>.</li>
+        <li>Plus tard (chapitre 05) : erreurs <strong>récupérables</strong> avec <code>Result&lt;T, E&gt;</code>.</li>
+      </ul>
+      <div class="warn"><b>Bug caché :</b> <code>end - start</code> passe sous zéro si <code>end &lt; start</code> (un <code>u32</code> ne peut pas être négatif). Avec ton <code>Cargo.toml</code> actuel (<code>overflow-checks = false</code>), ce calcul <strong>ne panique plus</strong> : il renvoie silencieusement un nombre énorme. Correction : <code>start.abs_diff(end)</code> ou <code>end.checked_sub(start)</code>.</div>
+    </div>
+  </details>
+
+  <details class="ex" id="ex05">
+    <summary><span class="exid">05</span><span class="extitle">factorial<small>Récursion</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">fn</span> factorial(n: <span class="tt">u32</span>) -&gt; <span class="tt">u32</span> {
+    <span class="tk">if</span> n == <span class="tn">0</span> { <span class="tk">return</span> <span class="tn">1</span> }
+    <span class="tk">else</span> { <span class="tk">return</span> n * factorial(n - <span class="tn">1</span>) }
+}</code></pre>
+      <ul>
+        <li><strong>Principe :</strong> un cas de base (<code>0! = 1</code>) et un cas récursif (<code>n! = n × (n−1)!</code>).</li>
+        <li><strong>Pourquoi c'est sûr :</strong> quand <code>n == 0</code>, on ne calcule jamais <code>n - 1</code>, donc pas d'underflow.</li>
+        <li>Chaque appel empile un <em>stack frame</em>. Rust <strong>ne garantit pas</strong> l'optimisation des appels terminaux : pour de grandes profondeurs, préférer une boucle (risque de <em>stack overflow</em>).</li>
+        <li>Version idiomatique : <code>if n == 0 { 1 } else { n * factorial(n - 1) }</code>.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex06">
+    <summary><span class="exid">06</span><span class="extitle">while<small>Boucle et <code>mut</code></small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">pub fn</span> factorial(<span class="tk">mut</span> n: <span class="tt">u32</span>) -&gt; <span class="tt">u32</span> {
+    <span class="tk">let mut</span> res: <span class="tt">u32</span> = <span class="tn">1</span>;
+    <span class="tk">while</span> n &gt; <span class="tn">1</span> {
+        res *= n;
+        n -= <span class="tn">1</span>;
+    }
+    res
+}</code></pre>
+      <ul>
+        <li><strong>Fait :</strong> un accumulateur <code>res</code> et un décrément de <code>n</code>. La condition <code>n &gt; 1</code> couvre <code>0! = 1</code> et <code>1! = 1</code> sans entrer dans la boucle.</li>
+        <li><strong>Principe clé :</strong> <code>mut</code> obligatoire sur <code>res</code> <strong>et</strong> sur <code>n</code>, sinon E0384.</li>
+        <li><code>mut n</code> dans les paramètres = la <strong>copie locale</strong> est modifiable (voir §1.3).</li>
+        <li><code>res</code> renvoyé sans <code>;</code> → valeur de retour.</li>
+      </ul>
+      <div class="warn"><b>Piège classique :</b> <code>while n &gt;= 0</code> sur un <code>u32</code> ne s'arrête jamais normalement : un <code>u32</code> est <em>toujours</em> <code>&gt;= 0</code>, et <code>n -= 1</code> finit par passer sous zéro.</div>
+    </div>
+  </details>
+
+  <details class="ex" id="ex07">
+    <summary><span class="exid">07</span><span class="extitle">for<small><code>for</code> et ranges</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">pub fn</span> factorial(n: <span class="tt">u32</span>) -&gt; <span class="tt">u32</span> {
+    <span class="tk">let mut</span> res = <span class="tn">1</span>;
+    <span class="tk">for</span> i <span class="tk">in</span> <span class="tn">1</span>..=n {
+        res *= i;
+    }
+    res
+}</code></pre>
+      <ul>
+        <li><strong>Principe :</strong> <code>for</code> parcourt un <strong>itérateur</strong>. Plus de compteur manuel, donc moins de bugs (décalage d'un, oubli d'incrément).</li>
+        <li><code>i</code> n'a pas besoin de <code>mut</code> : c'est une <strong>nouvelle variable</strong> à chaque tour.</li>
+        <li><code>n = 0</code> → <code>1..=0</code> est <strong>vide</strong> → on renvoie 1.</li>
+        <li><code>res</code> est inféré <code>u32</code> grâce à <code>i: u32</code> et au <code>-&gt; u32</code>.</li>
+      </ul>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Syntaxe</th><th>Contenu</th><th>Dans un <code>for</code> ?</th></tr></thead>
+        <tbody>
+          <tr><td><code>1..5</code></td><td>1, 2, 3, 4 (5 exclu)</td><td>oui</td></tr>
+          <tr><td><code>1..=5</code></td><td>1, 2, 3, 4, 5</td><td>oui</td></tr>
+          <tr><td><code>1..</code></td><td>1 → max du type</td><td>oui</td></tr>
+          <tr><td><code>..5</code></td><td>min → 4</td><td>non (slices, patterns)</td></tr>
+          <tr><td><code>..=5</code></td><td>min → 5</td><td>non</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </details>
+
+  <details class="ex" id="ex08">
+    <summary><span class="exid">08</span><span class="extitle">overflow <span class="flag w">réglage global</span><small>Profils Cargo et <code>overflow-checks</code></small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+      <p><strong>Aucune modification du <code>lib.rs</code>.</strong> Tout se passe dans le <code>Cargo.toml</code> <strong>racine</strong> :</p>
+<pre><code>[profile.dev]
+overflow-checks = <span class="tk">false</span></code></pre>
+      <ul>
+        <li><strong>Problème :</strong> <code>20! = 2 432 902 008 176 640 000</code> ne tient pas dans un <code>u32</code> (max ≈ 4,29 milliards).</li>
+        <li><strong>Pas de promotion automatique</strong> vers un type plus grand (principe 2). Deux options : <strong>refuser</strong> (panic <code>attempt to multiply with overflow</code>) ou <strong>faire le tour</strong> (wrap) : on garde les 32 bits de poids faible, c'est-à-dire le résultat <strong>modulo 2³²</strong> → <code>2 192 834 560</code>.</li>
+      </ul>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Profil</th><th>Utilisé par</th><th><code>overflow-checks</code> par défaut</th></tr></thead>
+        <tbody>
+          <tr><td><code>dev</code></td><td><code>cargo build</code>, <code>run</code>, <code>test</code></td><td><code>true</code> (panic)</td></tr>
+          <tr><td><code>release</code></td><td><code>--release</code></td><td><code>false</code> (wrap)</td></tr>
+          <tr><td><code>test</code></td><td>hérite de <code>dev</code></td><td>—</td></tr>
+          <tr><td><code>bench</code></td><td>hérite de <code>release</code></td><td>—</td></tr>
+        </tbody>
+      </table></div>
+      <p><strong>Pourquoi le <code>Cargo.toml</code> racine ?</strong> Le dépôt est un <strong>workspace</strong> (<code>members = ["exercises/*/*"]</code>) : les profils ne se configurent qu'à la racine du workspace et s'appliquent à tous les membres.</p>
+      <div class="warn"><b>Conséquence :</b> ce réglage vaut pour <strong>tous</strong> les exercices du dépôt. Le cours recommande plutôt <code>overflow-checks = true</code>, même en release : mieux vaut planter que produire un résultat faux. Le bloc <code>[profile.dev.package.copy]</code> existe justement pour forcer les checks sur un exercice à venir.</div>
+    </div>
+  </details>
+
+  <details class="ex" id="ex09">
+    <summary><span class="exid">09</span><span class="extitle">saturating<small>Choisir au cas par cas</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">let mut</span> result: <span class="tt">u32</span> = <span class="tn">1</span>;
+<span class="tk">for</span> i <span class="tk">in</span> <span class="tn">1</span>..=n {
+    result = result.saturating_mul(i);
+}</code></pre>
+      <p><strong>Principe :</strong> <code>overflow-checks</code> est un réglage <strong>global et grossier</strong>. Les méthodes permettent de choisir <strong>opération par opération</strong>.</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Méthode</th><th>En cas de dépassement</th><th><code>255u8 + 1</code></th></tr></thead>
+        <tbody>
+          <tr><td><code>+</code> (checks activés)</td><td>panic</td><td>panic</td></tr>
+          <tr><td><code>+</code> (checks désactivés)</td><td>wrap</td><td class="num">0</td></tr>
+          <tr><td><code>wrapping_add</code></td><td>wrap, toujours</td><td class="num">0</td></tr>
+          <tr><td><code>saturating_add</code></td><td>bloque à MAX ou MIN</td><td class="num">255</td></tr>
+          <tr><td><code>checked_add</code></td><td>renvoie <code>Option</code></td><td class="num">None</td></tr>
+          <tr><td><code>overflowing_add</code></td><td>(résultat wrappé, bool)</td><td class="num">(0, true)</td></tr>
+        </tbody>
+      </table></div>
+      <ul>
+        <li>La saturation ne s'obtient <strong>que</strong> par les méthodes, jamais par un profil.</li>
+        <li><code>20!</code> saturé → <code>u32::MAX</code> = 4 294 967 295.</li>
+        <li><strong>L'annotation <code>: u32</code> est indispensable</strong> : appel de méthode sur un <code>{integer}</code> ambigu → E0689 (voir §1).</li>
+        <li>Une <strong>méthode</strong> est une fonction attachée à un type, appelée par <code>valeur.methode(args)</code> ; la valeur devient le premier argument (<code>self</code>). Ici <code>self</code> est un <code>u32</code>, donc copié.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex10">
+    <summary><span class="exid">10</span><span class="extitle">as_casting<small>Conversions explicites</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">let</span> v: <span class="tt">u32</span> = <span class="tn">47</span>;   <span class="tm">assert_eq!</span>(<span class="tn">47u16</span> <span class="tk">as</span> <span class="tt">u32</span>, v);  <span class="tc">// élargissement, sans perte</span>
+<span class="tk">let</span> y: <span class="tt">i8</span>  = -<span class="tn">1</span>;   <span class="tm">assert_eq!</span>(<span class="tn">255</span> <span class="tk">as</span> <span class="tt">i8</span>, y);     <span class="tc">// mêmes bits, autre lecture</span>
+<span class="tk">let</span> v: <span class="tt">u8</span>  = <span class="tn">1</span>;    <span class="tm">assert_eq!</span>(<span class="tk">true as</span> <span class="tt">u8</span>, v);    <span class="tc">// true → 1, false → 0</span></code></pre>
+      <ul>
+        <li><strong><code>as</code> est infaillible</strong> : il produit <strong>toujours</strong> une valeur, même absurde.</li>
+        <li><strong>Grand → petit : troncature.</strong> On garde les bits de poids faible : <code>256u16 as u8 == 0</code>.</li>
+        <li><strong>Même taille, signe différent :</strong> les bits ne changent pas, seule leur lecture change.</li>
+      </ul>
+      <p><code>255</code> en mémoire :</p>
+      <div class="bits" aria-label="bits de 255"><span class="sign">1</span><span>1</span><span>1</span><span>1</span><span>1</span><span>1</span><span>1</span><span>1</span></div>
+      <ul>
+        <li>Lu en <code>u8</code> : 128 + 64 + … + 1 = <strong>255</strong>.</li>
+        <li>Lu en <code>i8</code> (complément à deux) : le bit de poids fort vaut <strong>−128</strong>, donc −128 + 127 = <strong>−1</strong>.</li>
+        <li>Pour obtenir −x : inverser tous les bits, puis ajouter 1.</li>
+        <li><code>#[allow(overflowing_literals)]</code> désactive le lint qui refuse <code>255 as i8</code> sur un <strong>littéral</strong>. Sur une variable, le compilateur ne peut rien détecter.</li>
+      </ul>
+      <div class="say"><b>Règle d'or</b><code>as</code> uniquement du petit vers le grand. Pour grand → petit : <code>TryFrom</code> / <code>try_into()</code> (chapitre 05), qui renvoie une erreur au lieu de mentir.</div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ OVERFLOW ============ -->
+<section id="overflow">
+  <h2><span class="num">§4</span>Overflow et underflow</h2>
+  <div class="ring">
+    <svg viewBox="0 0 260 260" role="img" aria-label="Les valeurs d'un u8 disposées en cercle : après 255 on revient à 0">
+      <circle cx="130" cy="130" r="92" fill="none" stroke="var(--line)" stroke-width="14"/>
+      <path d="M130 38 A92 92 0 0 1 187 58" fill="none" stroke="var(--accent)" stroke-width="14" stroke-linecap="round"/>
+      <g font-family="JetBrains Mono, monospace" font-size="13" fill="var(--ink)" text-anchor="middle">
+        <text x="130" y="22">0</text>
+        <text x="72" y="30" fill="var(--muted)">255</text>
+        <text x="228" y="134">64</text>
+        <text x="130" y="248">128</text>
+        <text x="30" y="134">192</text>
+        <text x="206" y="48" fill="var(--accent-ink)">1</text>
+      </g>
+      <g font-family="IBM Plex Sans, sans-serif" text-anchor="middle">
+        <text x="130" y="124" font-size="15" font-weight="600" fill="var(--ink)">u8</text>
+        <text x="130" y="144" font-size="12" fill="var(--ink-2)">255 + 1 → 0</text>
+        <text x="130" y="160" font-size="12" fill="var(--ink-2)">0 − 1 → 255</text>
+      </g>
+    </svg>
+    <div>
+      <ul>
+        <li><strong>Overflow :</strong> le résultat dépasse MAX. <strong>Underflow :</strong> il passe sous MIN (ex. <code>3u32 - 10</code>).</li>
+        <li>Selon le contexte : <strong>panic</strong> (dev), <strong>wrap</strong> (release, <code>overflow-checks = false</code>, <code>wrapping_*</code>), <strong>saturation</strong> (<code>saturating_*</code>), <strong><code>Option</code></strong> (<code>checked_*</code>).</li>
+        <li><strong>Pourquoi c'est grave :</strong> le contrat « <code>u32</code> op <code>u32</code> → <code>u32</code> mathématiquement juste » est rompu. En fintech (montants, soldes), un wrap silencieux est catastrophique : préfère <code>checked_*</code> et traite le <code>None</code>.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TESTS ============ -->
+<section id="tests">
+  <h2><span class="num">§5</span>Les tests en Rust</h2>
+<pre><code><span class="tm">#[cfg(test)]</span>               <span class="tc">// compilé uniquement pour cargo test</span>
+<span class="tk">mod</span> tests {
+    <span class="tk">use crate</span>::factorial;    <span class="tc">// import depuis la racine du crate</span>
+
+    <span class="tm">#[test]</span>
+    <span class="tk">fn</span> fifth() { <span class="tm">assert_eq!</span>(factorial(<span class="tn">5</span>), <span class="tn">120</span>); }
+
+    <span class="tm">#[test]</span>
+    <span class="tm">#[should_panic(expected = </span><span class="ts">"impossible"</span><span class="tm">)]</span>
+    <span class="tk">fn</span> by_zero() { speed(<span class="tn">0</span>, <span class="tn">10</span>, <span class="tn">0</span>); }
+}</code></pre>
+  <ul>
+    <li><code>cargo test -p &lt;package&gt;</code> lance un seul exercice (nom dans le <code>Cargo.toml</code> de l'exercice, ex. <code>while_</code>).</li>
+    <li><code>#[...]</code> est un <strong>attribut</strong> : une métadonnée pour le compilateur.</li>
+    <li><code>[lints.rust] dead_code = "allow"</code> dans les <code>Cargo.toml</code> des exercices : pas d'avertissement pour les fonctions privées utilisées seulement par les tests.</li>
+  </ul>
+</section>
+
+<!-- ============ ORAL ============ -->
+<section id="oral">
+  <h2><span class="num">§6</span>Questions d'oral</h2>
+  <p class="intro">Réponds à voix haute avant d'ouvrir la réponse.</p>
+  <div class="tools">
+    <button type="button" id="revealAll">Tout révéler</button>
+    <button type="button" id="hideAll">Tout masquer</button>
+  </div>
+  <div class="quiz">
+    <details class="q"><summary>Pourquoi <code>let m: u8 = 4; a * m</code> (avec <code>a: u32</code>) ne compile pas, alors qu'aucune information ne serait perdue ?</summary><div class="a">Rust ne fait aucune conversion implicite : les opérateurs exigent deux opérandes du même type. Il faut <code>m as u32</code> ou typer <code>m: u32</code>.</div></details>
+    <details class="q"><summary>Quelle différence entre <code>5</code> et <code>5;</code> en fin de fonction ?</summary><div class="a"><code>5</code> est une expression, donc la valeur de retour. <code>5;</code> est une instruction : le bloc vaut <code>()</code>, d'où une erreur de type.</div></details>
+    <details class="q"><summary>Pourquoi les paramètres de fonction doivent-ils être typés, et pas les <code>let</code> ?</summary><div class="a">La signature est un contrat : lisible sans lire le corps, elle permet de typer chaque fonction indépendamment (compilation plus rapide, erreurs localisées).</div></details>
+    <details class="q"><summary>Pourquoi <code>let mut r = 1; r = r.saturating_mul(i);</code> ne compile pas, alors que <code>r *= i</code> compile ?</summary><div class="a">Un appel de méthode exige un type concret pour savoir quelle méthode appeler ; <code>{integer}</code> est ambigu → E0689. Un opérateur laisse l'inférence se terminer.</div></details>
+    <details class="q"><summary>Que fait exactement <code>fn f(mut n: u32)</code> ? L'appelant voit-il la modification ?</summary><div class="a"><code>n</code> est une copie locale modifiable. L'appelant ne voit rien. Pour modifier sa variable : <code>&amp;mut u32</code>.</div></details>
+    <details class="q"><summary>Pourquoi <code>let y = x;</code> puis utiliser <code>x</code> marche avec un <code>u32</code> mais pas avec un <code>String</code> ?</summary><div class="a"><code>u32</code> est <code>Copy</code> (copie bit à bit). <code>String</code> possède de la mémoire sur le tas : l'affectation est un move et l'ancienne variable est invalidée (E0382).</div></details>
+    <details class="q"><summary>Quelles sont les 3 règles de l'ownership ? Que signifie « aliasing XOR mutation » ?</summary><div class="a">Un seul propriétaire ; destruction à la fin de la portée ; N références <code>&amp;</code> OU une seule <code>&amp;mut</code>. On ne peut pas à la fois partager et modifier une valeur.</div></details>
+    <details class="q"><summary>Que vaut <code>factorial(20)</code> en <code>u32</code> : en dev par défaut ? avec <code>overflow-checks = false</code> ? avec <code>saturating_mul</code> ?</summary><div class="a">Panic (<code>attempt to multiply with overflow</code>) ; <code>2 192 834 560</code> (modulo 2³²) ; <code>u32::MAX</code> = 4 294 967 295.</div></details>
+    <details class="q"><summary>Pourquoi modifier le <code>Cargo.toml</code> <strong>racine</strong> et pas celui de l'exercice ?</summary><div class="a">Le dépôt est un workspace Cargo : les profils ne se configurent qu'à la racine du workspace.</div></details>
+    <details class="q"><summary>Pourquoi <code>255 as i8 == -1</code> ? Explique avec les bits.</summary><div class="a">Les bits <code>1111 1111</code> sont conservés. Lus en complément à deux, le bit de poids fort vaut −128 : −128 + 127 = −1.</div></details>
+    <details class="q"><summary>Pourquoi <code>as</code> est-il dangereux, et que faut-il utiliser pour grand → petit ?</summary><div class="a">Il tronque ou réinterprète sans prévenir. Utiliser <code>TryFrom</code> / <code>try_into()</code>, qui renvoie une erreur.</div></details>
+    <details class="q"><summary>Quel bug reste caché dans <code>speed</code> à l'ex. 04 ? Comment le corriger ?</summary><div class="a"><code>end - start</code> passe sous zéro si <code>end &lt; start</code>. Corriger avec <code>start.abs_diff(end)</code> ou <code>end.checked_sub(start)</code>.</div></details>
+    <details class="q"><summary><code>panic!</code> ou <code>Result</code> : quand utiliser l'un ou l'autre ?</summary><div class="a"><code>panic!</code> : bug ou état impossible, irrécupérable. <code>Result</code> : échec prévisible que l'appelant doit gérer.</div></details>
+    <details class="q"><summary>Pourquoi Rust est-il immuable par défaut ?</summary><div class="a">Pour rendre la mutation explicite et rare : code plus lisible, garantie « aliasing XOR mutation » facile à vérifier à la compilation, et concurrence plus sûre.</div></details>
+  </div>
+</section>
+
+<footer>Fiche construite à partir de tes solutions (commit 941af42) et du cours <code>book/src/02_basic_calculator</code>. Version Markdown : <code>fiches/02_basic_calculator.md</code>.</footer>
+</main>
+</div>
+
+<script>
+(function(){
+  var set = function(sel, open){ document.querySelectorAll(sel).forEach(function(d){ d.open = open; }); };
+  document.getElementById('openAll').addEventListener('click', function(){ set('details.ex', true); });
+  document.getElementById('closeAll').addEventListener('click', function(){ set('details.ex', false); });
+  document.getElementById('revealAll').addEventListener('click', function(){ set('details.q', true); });
+  document.getElementById('hideAll').addEventListener('click', function(){ set('details.q', false); });
+
+  // Ouvre l'exercice ciblé depuis le sommaire
+  document.querySelectorAll('nav.toc a[href^="#ex"]').forEach(function(a){
+    a.addEventListener('click', function(){
+      var d = document.querySelector(a.getAttribute('href'));
+      if (d && d.tagName === 'DETAILS') d.open = true;
+    });
+  });
+
+  // Surligne la section courante dans le sommaire
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var targets = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (!e.isIntersecting) return;
+        var i = targets.indexOf(e.target);
+        links.forEach(function(l){ l.classList.remove('active'); });
+        if (i >= 0) links[i].classList.add('active');
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    targets.forEach(function(t){ if (t) io.observe(t); });
+  }
+})();
+</script>
+</body>
+</html>

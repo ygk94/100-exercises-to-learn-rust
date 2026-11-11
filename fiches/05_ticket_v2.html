@@ -1,0 +1,926 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiche Ticket v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --bg:#f5f6f7; --surface:#ffffff; --surface-2:#eceef1; --ink:#1b2127; --ink-2:#4a545e; --muted:#6c7680;
+  --line:#d9dde2; --accent:#b4461a; --accent-soft:#f6e3d8; --accent-ink:#8a3310;
+  --code-bg:#1d2329; --code-ink:#e4e7ea; --k:#ff9f6b; --t:#7fd1c7; --s:#c3e88d; --c:#7c8a96; --n:#f2c46d; --m:#b6a6ff;
+  --ok:#2f7d4f; --ok-soft:#e1f1e7; --warn:#9a6a00; --warn-soft:#fbefd0; --bad:#b0302c; --bad-soft:#f8e0de;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"IBM Plex Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#13171b; --surface:#1a1f24; --surface-2:#232a30; --ink:#e6e9ec; --ink-2:#b3bcc4; --muted:#8a949d;
+    --line:#2e363d; --accent:#f08a5a; --accent-soft:#3a2419; --accent-ink:#ffb48f;
+    --code-bg:#0e1215; --ok:#6fcf97; --ok-soft:#18301f; --warn:#e8bd55; --warn-soft:#33290f; --bad:#f08a86; --bad-soft:#3a1c1b;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#13171b; --surface:#1a1f24; --surface-2:#232a30; --ink:#e6e9ec; --ink-2:#b3bcc4; --muted:#8a949d;
+  --line:#2e363d; --accent:#f08a5a; --accent-soft:#3a2419; --accent-ink:#ffb48f;
+  --code-bg:#0e1215; --ok:#6fcf97; --ok-soft:#18301f; --warn:#e8bd55; --warn-soft:#33290f; --bad:#f08a86; --bad-soft:#3a1c1b;
+}
+*{box-sizing:border-box}
+main a,footer a{color:var(--accent-ink);text-underline-offset:2px}
+code,pre,.tree,.bits{font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{background:var(--bg);color:var(--ink);font:16px/1.65 var(--body);padding-inline:16px}
+.shell{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:230px minmax(0,1fr);gap:48px;padding-block:40px 80px}
+@media (max-width:900px){.shell{grid-template-columns:minmax(0,1fr);gap:24px;padding-block:24px 60px}}
+
+/* nav */
+nav.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px);align-self:start;font-size:14px}
+nav.toc .brand{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px}
+nav.toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+nav.toc a{display:block;color:var(--ink-2);text-decoration:none;padding:5px 10px;border-radius:6px;border-left:2px solid transparent}
+nav.toc a:hover{background:var(--surface-2);color:var(--ink)}
+nav.toc a.active{color:var(--accent-ink);border-left-color:var(--accent);background:var(--accent-soft);border-radius:0 6px 6px 0}
+nav.toc .sub a{padding-left:22px;font-family:var(--mono);font-size:12.5px}
+@media (max-width:900px){
+  nav.toc{position:static}
+  nav.toc ol{flex-direction:row;flex-wrap:wrap;gap:6px}
+  nav.toc .sub{display:none}
+  nav.toc a{border:1px solid var(--line);border-radius:999px;padding:4px 12px}
+  nav.toc a.active{border-radius:999px;border-color:var(--accent)}
+}
+
+main{min-width:0}
+header.hero{padding-bottom:28px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.eyebrow{font-family:var(--mono);font-size:12.5px;color:var(--accent);letter-spacing:.05em}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(34px,5vw,52px);line-height:1.05;margin:8px 0 14px;text-wrap:balance;letter-spacing:-.01em}
+.lede{color:var(--ink-2);max-width:62ch;margin:0;font-size:17px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--mono);font-size:12px;padding:3px 10px;border-radius:999px;background:var(--surface-2);color:var(--ink-2)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+
+section{padding-top:44px}
+h2{font-family:var(--display);font-weight:800;font-size:clamp(24px,3vw,30px);line-height:1.15;margin:0 0 6px;text-wrap:balance}
+h2 .num{font-family:var(--mono);font-weight:400;font-size:.55em;color:var(--accent);vertical-align:.35em;margin-right:8px}
+h3{font-family:var(--display);font-weight:600;font-size:20px;margin:28px 0 8px;text-wrap:balance}
+h4{font-size:15px;font-weight:600;margin:20px 0 6px}
+p,li{max-width:70ch}
+p{margin:10px 0}
+ul,ol{padding-left:22px;margin:8px 0}
+li{margin:4px 0}
+.intro{color:var(--ink-2)}
+strong{font-weight:600}
+code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);padding:1px 5px;border-radius:4px}
+pre{margin:14px 0;background:var(--code-bg);color:var(--code-ink);border-radius:10px;padding:16px 18px;overflow-x:auto;font:13.5px/1.6 var(--mono)}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.tk{color:var(--k)} .tt{color:var(--t)} .ts{color:var(--s)} .tc{color:var(--c);font-style:italic} .tn{color:var(--n)} .tm{color:var(--m)}
+
+.tablewrap{overflow-x:auto;margin:14px 0;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;background:var(--surface-2);font-size:13px;color:var(--ink-2)}
+tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:13px;white-space:nowrap}
+
+.say{margin:18px 0;padding:14px 18px;background:var(--accent-soft);border-radius:10px;color:var(--ink)}
+.say b{display:block;font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:4px;font-weight:600}
+.warn{margin:14px 0;padding:12px 16px;background:var(--warn-soft);border-radius:10px}
+.warn b{color:var(--warn)}
+
+/* principles */
+.principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:18px 0}
+.pr{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pr .i{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.pr h4{margin:4px 0 6px;font-size:15.5px}
+.pr p{margin:0;font-size:14px;color:var(--ink-2)}
+
+/* pipeline */
+.pipeline{display:flex;flex-direction:column;gap:0;margin:18px 0;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+.stage{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.stage:last-child{border-bottom:0}
+.stage .n{font-family:var(--mono);color:var(--muted);font-size:13px;padding-top:2px}
+.stage h4{margin:0}
+.stage p{margin:2px 0 0;font-size:14px;color:var(--ink-2)}
+.stage.hl{background:var(--accent-soft)}
+.stage.hl .n{color:var(--accent-ink)}
+.err{font-family:var(--mono);font-size:12px;color:var(--bad);white-space:nowrap}
+
+/* exercises */
+details.ex{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin:12px 0}
+details.ex[open]{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+details.ex>summary{cursor:pointer;list-style:none;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 18px}
+details.ex>summary::-webkit-details-marker{display:none}
+details.ex>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:12px}
+.exid{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:600}
+.extitle{font-weight:600}
+.extitle small{display:block;font-weight:400;color:var(--muted);font-size:13.5px}
+.chev{color:var(--muted);transition:transform .2s}
+details[open] .chev{transform:rotate(90deg)}
+.exbody{padding:0 18px 18px;border-top:1px solid var(--line)}
+.flag{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:2px}
+.flag.w{background:var(--warn-soft);color:var(--warn)}
+.tools{display:flex;gap:8px;margin:14px 0 4px;flex-wrap:wrap}
+button{font:500 13px var(--body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{background:var(--surface-2)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ring */
+.ring{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:24px;align-items:center;margin:16px 0}
+@media (max-width:640px){.ring{grid-template-columns:minmax(0,1fr)}}
+.ring svg{width:100%;max-width:260px;height:auto}
+.bits{font-family:var(--mono);font-size:14px;display:flex;gap:3px;flex-wrap:wrap}
+.bits span{width:24px;height:28px;display:grid;place-items:center;border-radius:4px;background:var(--surface-2)}
+.bits span.sign{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+
+/* quiz */
+.quiz{counter-reset:q;display:flex;flex-direction:column;gap:8px;margin-top:14px}
+details.q{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+details.q>summary{cursor:pointer;list-style:none;padding:12px 16px;display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:10px;align-items:baseline}
+details.q>summary::-webkit-details-marker{display:none}
+details.q>summary::before{counter-increment:q;content:counter(q);font-family:var(--mono);font-size:13px;color:var(--accent)}
+details.q>summary::after{content:"Réponse";font-size:12px;color:var(--muted);font-family:var(--mono)}
+details.q[open]>summary::after{content:"Masquer"}
+details.q>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
+details.q .a{padding:0 16px 14px 58px;color:var(--ink-2)}
+@media (max-width:520px){details.q .a{padding-left:16px}}
+footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+</style>
+<style>
+.flag.b{background:var(--bad-soft);color:var(--bad)}
+.flag.o{background:var(--ok-soft);color:var(--ok)}
+.progress{display:grid;grid-template-columns:repeat(13,minmax(0,1fr));gap:4px;margin-top:18px;max-width:560px}
+.progress span{height:8px;border-radius:2px;background:var(--surface-2)}
+.progress span.done{background:var(--accent)}
+.progress-legend{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:6px}
+.receivers{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:18px 0}
+.rcv{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.rcv code.big{font-size:17px;background:none;padding:0;color:var(--accent-ink);font-weight:600}
+.rcv .what{font-size:13px;color:var(--muted);margin:2px 0 8px;font-family:var(--mono)}
+.rcv p{margin:6px 0 0;font-size:14px;color:var(--ink-2)}
+.rcv .use{font-size:13.5px;margin-top:8px}
+.lock{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:16px 0}
+.lock>div{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--surface)}
+.lock h4{margin:0 0 6px}
+.lock .tag{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tree{font:13.5px/1.7 var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;overflow-x:auto;white-space:pre;color:var(--ink)}
+.tree .p{color:var(--bad)} .tree .u{color:var(--ok)} .tree .m{color:var(--muted)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:700px){.two{grid-template-columns:minmax(0,1fr)}}
+.two pre{margin:0}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin:10px 0 4px}
+.todo{border:1px dashed var(--line);border-radius:12px;padding:14px 18px;color:var(--ink-2);margin:12px 0}
+.todo ul{margin:6px 0 0}
+</style>
+<style>
+.progress.p15{grid-template-columns:repeat(15,minmax(0,1fr))}
+.progress.p16{grid-template-columns:repeat(16,minmax(0,1fr))}
+.vs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin:16px 0}
+@media (max-width:700px){.vs{grid-template-columns:minmax(0,1fr)}}
+.vs>div{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--surface)}
+.vs h4{margin:0 0 6px}
+.vs .tag{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.vs pre{margin:10px 0 0}
+</style>
+
+</head>
+<body>
+<div class="shell">
+<nav class="toc" aria-label="Sommaire">
+  <div class="brand">Chapitre 05</div>
+  <ol>
+    <li><a href="#avancement">Où tu en es</a></li>
+    <li><a href="#principes">Premiers principes</a></li>
+    <li><a href="#enums">Enums &amp; match</a></li>
+    <li><a href="#option">Option</a></li>
+    <li><a href="#result">Result &amp; panic</a></li>
+    <li><a href="#erreurs">Types d'erreur</a></li>
+    <li><a href="#tryfrom">TryFrom &amp; newtypes</a></li>
+    <li><a href="#crates">Packages &amp; modules</a></li>
+    <li><a href="#exercices">Exercices</a></li>
+    <li class="sub"><a href="#ex00">00 intro</a></li>
+    <li class="sub"><a href="#ex01">01 enum</a></li>
+    <li class="sub"><a href="#ex02">02 match</a></li>
+    <li class="sub"><a href="#ex03">03 variants_with_data</a></li>
+    <li class="sub"><a href="#ex04">04 if_let</a></li>
+    <li class="sub"><a href="#ex05">05 nullability</a></li>
+    <li class="sub"><a href="#ex06">06 fallibility</a></li>
+    <li class="sub"><a href="#ex07">07 unwrap</a></li>
+    <li class="sub"><a href="#ex08">08 error_enums</a></li>
+    <li class="sub"><a href="#ex09">09 error_trait</a></li>
+    <li class="sub"><a href="#ex10">10 packages</a></li>
+    <li class="sub"><a href="#ex11">11 dependencies</a></li>
+    <li class="sub"><a href="#ex12">12 thiserror</a></li>
+    <li class="sub"><a href="#ex13">13 try_from</a></li>
+    <li class="sub"><a href="#ex14">14 source</a></li>
+    <li class="sub"><a href="#ex15">15 outro</a></li>
+    <li><a href="#oral">Questions d'oral</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="hero" id="avancement">
+  <div class="eyebrow">100 exercises to learn Rust · 05_ticket_v2</div>
+  <h1>Fiche synthèse&nbsp;: Ticket v2</h1>
+  <p class="lede">Le chapitre des <strong>enums</strong> et de la <strong>gestion d'erreurs</strong>. Le <code>Ticket</code> du chapitre 03 vérifiait tout à l'exécution avec des <code>panic!</code>. Ici on fait porter les règles par les <strong>types</strong> : un statut ne peut plus être invalide, une valeur absente devient <code>Option</code>, un échec devient <code>Result</code>, et chaque erreur a son propre type.</p>
+  <div class="meta">
+    <span class="chip">16 exercices sur 16</span>
+    <span class="chip ok">tous les tests passent</span>
+    <span class="chip">travail non commité</span>
+  </div>
+  <div class="progress p16" aria-label="16 exercices faits sur 16">
+    <span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span>
+  </div>
+  <div class="progress-legend">chapitre terminé · suite : 06_ticket_management (collections)</div>
+</header>
+
+<!-- ============ PRINCIPES ============ -->
+<section id="principes">
+  <h2><span class="num">§0</span>Les premiers principes du chapitre</h2>
+  <p class="intro">Le chapitre 03 protégeait le <code>Ticket</code> par des vérifications. Le chapitre 05 le protège par des <strong>types</strong>.</p>
+  <div class="principles">
+    <div class="pr"><span class="i">principe 1</span><h4>Rendre l'invalide impossible</h4><p>Un <code>String</code> peut contenir <code>"Dnoe"</code>. Un <code>enum Status</code> ne peut valoir que ses variantes. L'erreur passe de l'exécution à la compilation.</p></div>
+    <div class="pr"><span class="i">principe 2</span><h4><code>match</code> est exhaustif</h4><p>Tous les cas doivent être traités. Ajouter une variante fait apparaître une erreur à chaque <code>match</code> à compléter.</p></div>
+    <div class="pr"><span class="i">principe 3</span><h4>Pas de <code>null</code></h4><p>Une valeur qui peut manquer s'écrit <code>Option&lt;T&gt;</code> : <code>Some(v)</code> ou <code>None</code>. Impossible d'oublier le cas vide.</p></div>
+    <div class="pr"><span class="i">principe 4</span><h4>Une erreur est une valeur</h4><p><code>Result&lt;T, E&gt;</code> : <code>Ok(v)</code> ou <code>Err(e)</code>. La signature annonce que ça peut échouer, et l'appelant décide quoi faire.</p></div>
+    <div class="pr"><span class="i">principe 5</span><h4>Valider une seule fois</h4><p>Un <code>TicketTitle</code> qui ne se construit que via <code>TryFrom</code> est valide par construction. Plus besoin de revérifier ailleurs.</p></div>
+  </div>
+  <div class="say"><b>À savoir dire</b>« En Rust, on encode les règles métier dans les types : un enum pour un ensemble fermé de valeurs, <code>Option</code> pour l'absence, <code>Result</code> pour l'échec. Le compilateur force alors à traiter chaque cas, au lieu de découvrir l'oubli en production. »</div>
+</section>
+
+<!-- ============ ENUMS ============ -->
+<section id="enums">
+  <h2><span class="num">§1</span>Enums et <code>match</code></h2>
+
+  <h3>Un enum : une valeur parmi une liste fermée</h3>
+<pre><code><span class="tk">#[derive(Debug, PartialEq, Clone, Copy)]</span>
+<span class="tk">enum</span> <span class="tt">Status</span> {
+    ToDo,
+    InProgress,
+    Done,
+}
+
+<span class="tk">let</span> s = <span class="tt">Status</span>::Done;      <span class="tc">// on nomme toujours Type::Variante</span></code></pre>
+  <ul>
+    <li>Avant : <code>status: String</code> + un <code>if status != "To-Do" &amp;&amp; …</code> qui paniquait à l'exécution. Après : <code>status: Status</code>, et <code>Status::Dnoe</code> ne compile pas.</li>
+    <li>Les derive sont <strong>récursifs</strong> : pour dériver <code>PartialEq</code> sur <code>Ticket</code>, il faut que <code>Status</code> l'ait aussi.</li>
+    <li>Un enum sans données peut être <code>Copy</code>. Un <code>Ticket</code> qui contient des <code>String</code>, non (<span class="err">E0204</span>).</li>
+  </ul>
+
+  <h3><code>match</code> : un <code>if</code> sur les variantes</h3>
+<pre><code><span class="tk">match</span> <span class="tk">self</span> {
+    <span class="tt">Shape</span>::Circle =&gt; <span class="tn">0</span>,
+    <span class="tt">Shape</span>::Square | <span class="tt">Shape</span>::Rectangle =&gt; <span class="tn">4</span>,   <span class="tc">// | = l'un ou l'autre</span>
+    <span class="tt">Shape</span>::Triangle =&gt; <span class="tn">3</span>,
+    <span class="tt">Shape</span>::Pentagon =&gt; <span class="tn">5</span>,
+}</code></pre>
+  <ul>
+    <li>Testé <strong>de haut en bas</strong> ; le premier motif qui correspond gagne. On exécute ce qui est <strong>après <code>=&gt;</code></strong> (une expression, ou un bloc <code>{ … }</code> si plusieurs lignes).</li>
+    <li><code>match</code> est une expression : il <strong>renvoie une valeur</strong>. En dernière position d'une fonction, sans <code>;</code>, c'est le retour.</li>
+    <li><strong>Exhaustif</strong> : oublier une variante donne <span class="err">E0004</span> non-exhaustive patterns.</li>
+    <li><code>_ =&gt; …</code> attrape « tout le reste ». Pratique, mais on perd l'alerte du compilateur si une variante est ajoutée plus tard.</li>
+  </ul>
+
+  <h3>Variantes avec données</h3>
+<pre><code><span class="tk">enum</span> <span class="tt">Status</span> {
+    ToDo,
+    InProgress { assigned_to: <span class="tt">String</span> },   <span class="tc">// cette variante transporte un nom</span>
+    Done,
+}
+
+<span class="tk">match</span> &amp;<span class="tk">self</span>.status {
+    <span class="tt">Status</span>::InProgress { assigned_to } =&gt; assigned_to,   <span class="tc">// le motif SORT la donnée</span>
+    _ =&gt; panic!(<span class="ts">"Only `In-Progress` tickets can be assigned to someone"</span>),
+}</code></pre>
+  <ul>
+    <li>Le motif <code>InProgress { assigned_to }</code> teste la variante <strong>et</strong> range le champ dans une variable <code>assigned_to</code>.</li>
+    <li><code>match &amp;self.status</code> : on emprunte, donc <code>assigned_to</code> est un <code>&amp;String</code> (pas de move hors de <code>self</code>).</li>
+    <li>Deux formes : <code>Variante { champ: T }</code> (champs nommés) ou <code>Variante(T)</code> (tuple, comme <code>TitleError(String)</code> ou <code>Some(v)</code>).</li>
+  </ul>
+
+  <h3><code>if let</code> et <code>let … else</code> : un seul cas intéressant</h3>
+<pre><code><span class="tk">if let</span> <span class="tt">Shape</span>::Circle { radius } = <span class="tk">self</span> {
+    *radius                          <span class="tc">// &amp;f64 → f64</span>
+} <span class="tk">else</span> {
+    panic!(<span class="ts">"Not a circle"</span>)
+}                                    <span class="tc">// ⚠ pas de ; ici : c'est la valeur de retour</span>
+
+<span class="tc">// variante let/else : sortir tôt si ça ne correspond pas</span>
+<span class="tk">let</span> <span class="tt">Shape</span>::Circle { radius } = <span class="tk">self</span> <span class="tk">else</span> {
+    panic!(<span class="ts">"Not a circle"</span>)
+};
+*radius</code></pre>
+  <div class="warn"><b>Piège rencontré :</b> un <code>;</code> après la dernière accolade transforme l'expression en instruction. La fonction renvoie alors <code>()</code> au lieu de <code>f64</code> : <span class="err">mismatched types</span>.</div>
+</section>
+
+<!-- ============ OPTION ============ -->
+<section id="option">
+  <h2><span class="num">§2</span><code>Option</code> : peut-être une valeur</h2>
+<pre><code><span class="tc">// défini dans std, dans le prelude</span>
+<span class="tk">enum</span> <span class="tt">Option</span>&lt;T&gt; {
+    Some(T),
+    None,
+}
+
+<span class="tk">pub fn</span> assigned_to(&amp;<span class="tk">self</span>) -&gt; <span class="tt">Option</span>&lt;&amp;<span class="tt">String</span>&gt; {
+    <span class="tk">match</span> &amp;<span class="tk">self</span>.status {
+        <span class="tt">Status</span>::InProgress { assigned_to } =&gt; Some(assigned_to),
+        _ =&gt; None,
+    }
+}</code></pre>
+  <ul>
+    <li>Rust n'a pas de <code>null</code>. L'absence est un cas <strong>visible dans le type</strong> : impossible d'utiliser la valeur sans avoir traité <code>None</code>.</li>
+    <li>Comparé à l'exo 03 : au lieu de paniquer, on renvoie <code>None</code> et c'est l'appelant qui décide.</li>
+    <li>Méthodes utiles : <code>.is_some()</code>, <code>.is_none()</code>, <code>.unwrap()</code> (panique si <code>None</code>).</li>
+  </ul>
+</section>
+
+<!-- ============ RESULT ============ -->
+<section id="result">
+  <h2><span class="num">§3</span><code>Result</code> : réussite ou erreur</h2>
+<pre><code><span class="tk">enum</span> <span class="tt">Result</span>&lt;T, E&gt; {
+    Ok(T),     <span class="tc">// succès, voici la valeur</span>
+    Err(E),    <span class="tc">// échec, voici pourquoi</span>
+}
+
+<span class="tk">pub fn</span> new(title: <span class="tt">String</span>, …) -&gt; <span class="tt">Result</span>&lt;<span class="tt">Ticket</span>, <span class="tt">String</span>&gt; {   <span class="tc">// ① le type de retour change</span>
+    <span class="tk">if</span> title.is_empty() {
+        <span class="tk">return</span> Err(<span class="ts">"Title cannot be empty"</span>.to_string());     <span class="tc">// ② panic! → return Err(...)</span>
+    }
+    …
+    Ok(<span class="tt">Ticket</span> { title, description, status })               <span class="tc">// ③ le succès est emballé</span>
+}</code></pre>
+
+  <h3><code>panic!</code> ou <code>Err</code> ?</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th></th><th><code>panic!</code></th><th><code>Err(...)</code></th></tr></thead>
+    <tbody>
+      <tr><td>Effet</td><td>le programme (thread) s'arrête</td><td>une valeur est renvoyée, le programme continue</td></tr>
+      <tr><td>Qui décide</td><td>personne, c'est fini</td><td>l'appelant (afficher, réessayer, valeur par défaut…)</td></tr>
+      <tr><td>Visible dans la signature</td><td>non</td><td>oui : <code>-&gt; Result&lt;T, E&gt;</code></td></tr>
+      <tr><td>Pour</td><td>bug, situation impossible</td><td>erreur prévisible (saisie invalide, fichier absent…)</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li>Une fonction ne renvoie <strong>qu'un seul type</strong>. Une erreur n'est pas un <code>Ticket</code>, d'où <code>Result&lt;Ticket, String&gt;</code> qui peut contenir l'un <em>ou</em> l'autre.</li>
+    <li>Tout ce qui sort doit être un <code>Result</code>, y compris le succès : d'où <code>Ok(...)</code>. Même idée que <code>Some(...)</code>.</li>
+  </ul>
+  <div class="warn"><b>Piège rencontré :</b> garder <code>-&gt; Ticket</code> dans la signature tout en écrivant <code>return Err(...)</code> donne <span class="err">mismatched types</span> expected <code>Ticket</code>, found <code>Result&lt;_, String&gt;</code>.</div>
+
+  <h3>Récupérer la valeur</h3>
+<pre><code><span class="tk">match</span> <span class="tt">Ticket</span>::new(title.clone(), description, status.clone()) {
+    Ok(ticket) =&gt; ticket,
+    Err(error) =&gt; panic!(<span class="ts">"{}"</span>, error),
+}
+
+r.unwrap()          <span class="tc">// Ok(v) → v ; Err → panique (exige E: Debug)</span>
+r.expect(<span class="ts">"msg"</span>)     <span class="tc">// pareil, avec ton message</span>
+r.unwrap_err()      <span class="tc">// l'inverse : Err(e) → e ; Ok → panique (utilisé dans les tests)</span>
+r.is_ok() / r.is_err()
+
+<span class="tk">let</span> status = <span class="tt">Status</span>::try_from(status)?;   <span class="tc">// ? : Ok(v) → v ; Err(e) → return Err(e.into())</span></code></pre>
+  <ul>
+    <li><code>?</code> ne marche que dans une fonction qui renvoie elle-même un <code>Result</code> (ou <code>Option</code>). Il convertit l'erreur avec <code>From</code>/<code>.into()</code>.</li>
+    <li><code>.clone()</code> avant de passer <code>title</code> à <code>new</code> : sinon il est déplacé et on ne peut plus le réutiliser pour un second essai.</li>
+  </ul>
+</section>
+
+<!-- ============ ERREURS ============ -->
+<section id="erreurs">
+  <h2><span class="num">§4</span>Des types d'erreur propres</h2>
+
+  <h3>Étape 1 : un enum d'erreurs</h3>
+<pre><code><span class="tk">#[derive(Debug)]</span>
+<span class="tk">enum</span> <span class="tt">TicketNewError</span> {
+    TitleError(<span class="tt">String</span>),
+    DescriptionError(<span class="tt">String</span>),
+}
+
+<span class="tk">match</span> <span class="tt">Ticket</span>::new(…) {
+    Ok(ticket) =&gt; ticket,
+    Err(<span class="tt">TicketNewError</span>::TitleError(msg)) =&gt; panic!(<span class="ts">"{}"</span>, msg),
+    Err(<span class="tt">TicketNewError</span>::DescriptionError(_)) =&gt; …,   <span class="tc">// _ : je n'utilise pas le message</span>
+}</code></pre>
+  <p>Avant on cherchait le mot « Description » dans le texte de l'erreur (<code>error.contains(...)</code>), ce qui est fragile. Maintenant la <strong>variante</strong> dit de quelle erreur il s'agit.</p>
+
+  <h3>Étape 2 : <code>Debug</code>, <code>Display</code>, <code>Error</code> à la main</h3>
+<pre><code><span class="tk">impl</span> std::fmt::<span class="tt">Display</span> <span class="tk">for</span> <span class="tt">TicketNewError</span> {
+    <span class="tk">fn</span> fmt(&amp;<span class="tk">self</span>, f: &amp;<span class="tk">mut</span> std::fmt::<span class="tt">Formatter</span>&lt;<span class="tk">'_</span>&gt;) -&gt; std::fmt::<span class="tt">Result</span> {
+        <span class="tk">match</span> <span class="tk">self</span> {
+            <span class="tt">TicketNewError</span>::TitleError(msg) =&gt; write!(f, <span class="ts">"{}"</span>, msg),
+            <span class="tt">TicketNewError</span>::DescriptionError(msg) =&gt; write!(f, <span class="ts">"{}"</span>, msg),
+        }
+    }
+}
+
+<span class="tk">impl</span> std::error::<span class="tt">Error</span> <span class="tk">for</span> <span class="tt">TicketNewError</span> {}   <span class="tc">// bloc vide : tout a une valeur par défaut</span></code></pre>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Trait</th><th>Pour qui</th><th>Format</th><th>Comment</th></tr></thead>
+    <tbody>
+      <tr><td><code>Debug</code></td><td>le développeur</td><td><code>{:?}</code></td><td><code>derive</code></td></tr>
+      <tr><td><code>Display</code></td><td>l'utilisateur</td><td><code>{}</code>, <code>.to_string()</code></td><td><strong>à la main</strong> (pas de derive), avec <code>write!</code></td></tr>
+      <tr><td><code>Error</code></td><td>« je suis une erreur »</td><td>—</td><td><code>impl … {}</code> ; supertraits : <code>Debug + Display</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Étape 3 : <code>thiserror</code> écrit tout ça pour toi</h3>
+<pre><code><span class="tk">#[derive(Debug, thiserror::Error)]</span>
+<span class="tk">enum</span> <span class="tt">TicketNewError</span> {
+    <span class="tk">#[error(</span><span class="ts">"Title cannot be empty"</span><span class="tk">)]</span>
+    TitleCannotBeEmpty,
+    <span class="tk">#[error(</span><span class="ts">"Title cannot be longer than 50 bytes"</span><span class="tk">)]</span>
+    TitleTooLong,
+    …
+}</code></pre>
+  <ul>
+    <li>Le derive <code>thiserror::Error</code> génère <code>impl Display</code> (avec le texte de <code>#[error("…")]</code>) et <code>impl Error</code>.</li>
+    <li>Dans le message, <code>{0}</code> = premier champ d'une variante tuple, <code>{nom}</code> = champ nommé.</li>
+    <li>Il faut l'ajouter au <code>Cargo.toml</code> : <code>thiserror = "1"</code>.</li>
+  </ul>
+
+  <h3>Étape 4 : chaîner les erreurs avec <code>source</code></h3>
+<pre><code><span class="tk">#[derive(Debug, thiserror::Error)]</span>
+<span class="tk">pub enum</span> <span class="tt">TicketNewError</span> {
+    …
+    <span class="tk">#[error(</span><span class="ts">"{0}"</span><span class="tk">)]</span>
+    InvalidStatus(<span class="tk">#[from]</span> status::<span class="tt">ParseStatusError</span>),   <span class="tc">// contient l'erreur d'origine</span>
+}
+
+<span class="tc">// dans new :</span>
+<span class="tk">let</span> status = <span class="tt">Status</span>::try_from(status)?;</code></pre>
+  <ul>
+    <li><code>#[from]</code> marque le champ comme <strong>source</strong> : <code>err.source()</code> renvoie <code>Some(...)</code> au lieu de <code>None</code>.</li>
+    <li>Il génère aussi <code>impl From&lt;ParseStatusError&gt; for TicketNewError</code>, ce qui permet au <code>?</code> de convertir l'erreur tout seul.</li>
+    <li><code>let status = …</code> réutilise le nom : c'est du <strong>shadowing</strong> (nouvelle variable de type <code>Status</code> qui masque l'ancienne <code>String</code>).</li>
+  </ul>
+</section>
+
+<!-- ============ TRYFROM ============ -->
+<section id="tryfrom">
+  <h2><span class="num">§5</span><code>TryFrom</code> et newtypes validés</h2>
+<pre><code><span class="tk">impl</span> <span class="tt">TryFrom</span>&lt;&amp;<span class="tt">str</span>&gt; <span class="tk">for</span> <span class="tt">Status</span> {
+    <span class="tk">type</span> <span class="tt">Error</span> = <span class="tt">String</span>;                       <span class="tc">// type associé, comme Add::Output</span>
+
+    <span class="tk">fn</span> try_from(value: &amp;<span class="tt">str</span>) -&gt; <span class="tt">Result</span>&lt;<span class="tt">Self</span>, <span class="tt">Self</span>::<span class="tt">Error</span>&gt; {
+        <span class="tk">match</span> value.to_lowercase().as_str() {     <span class="tc">// insensible à la casse</span>
+            <span class="ts">"todo"</span> =&gt; Ok(<span class="tt">Status</span>::ToDo),
+            <span class="ts">"inprogress"</span> =&gt; Ok(<span class="tt">Status</span>::InProgress),
+            <span class="ts">"done"</span> =&gt; Ok(<span class="tt">Status</span>::Done),
+            _ =&gt; Err(format!(<span class="ts">"Invalid status: {}"</span>, value)),
+        }
+    }
+}
+
+<span class="tk">impl</span> <span class="tt">TryFrom</span>&lt;<span class="tt">String</span>&gt; <span class="tk">for</span> <span class="tt">Status</span> {
+    <span class="tk">type</span> <span class="tt">Error</span> = <span class="tt">String</span>;
+    <span class="tk">fn</span> try_from(value: <span class="tt">String</span>) -&gt; <span class="tt">Result</span>&lt;<span class="tt">Self</span>, <span class="tt">Self</span>::<span class="tt">Error</span>&gt; {
+        <span class="tt">Status</span>::try_from(value.as_str())          <span class="tc">// réutilise la version &amp;str</span>
+    }
+}</code></pre>
+  <div class="tablewrap"><table>
+    <thead><tr><th></th><th><code>From</code> (chap. 04)</th><th><code>TryFrom</code></th></tr></thead>
+    <tbody>
+      <tr><td>Peut échouer</td><td>non</td><td>oui</td></tr>
+      <tr><td>Renvoie</td><td><code>Self</code></td><td><code>Result&lt;Self, Self::Error&gt;</code></td></tr>
+      <tr><td>Méthode gratuite</td><td><code>.into()</code></td><td><code>.try_into()</code></td></tr>
+      <tr><td>Exemple</td><td><code>u32</code> → <code>WrappingU32</code></td><td><code>&amp;str</code> → <code>Status</code> (<code>"invalid"</code> n'est pas un statut)</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><code>TryFrom</code> et <code>TryInto</code> sont dans le prelude depuis l'édition 2021 : pas de <code>use</code>.</li>
+    <li><code>.to_lowercase()</code> crée une <code>String</code> ; <code>.as_str()</code> en fait un <code>&amp;str</code> comparable aux littéraux du <code>match</code>.</li>
+  </ul>
+
+  <h3>Le newtype validé (exo 15)</h3>
+<pre><code><span class="tk">#[derive(Debug, PartialEq, Clone)]</span>
+<span class="tk">pub struct</span> <span class="tt">TicketTitle</span>(<span class="tt">String</span>);              <span class="tc">// champ privé : seul TryFrom peut le construire</span>
+
+<span class="tk">impl</span> <span class="tt">TryFrom</span>&lt;<span class="tt">String</span>&gt; <span class="tk">for</span> <span class="tt">TicketTitle</span> {
+    <span class="tk">type</span> <span class="tt">Error</span> = <span class="tt">TicketTitleError</span>;
+    <span class="tk">fn</span> try_from(value: <span class="tt">String</span>) -&gt; <span class="tt">Result</span>&lt;<span class="tt">Self</span>, <span class="tt">Self</span>::<span class="tt">Error</span>&gt; {
+        <span class="tk">if</span> value.is_empty() { <span class="tk">return</span> Err(<span class="tt">TicketTitleError</span>::Empty); }
+        <span class="tk">if</span> value.len() &gt; <span class="tn">50</span> { <span class="tk">return</span> Err(<span class="tt">TicketTitleError</span>::TooLong); }
+        Ok(<span class="tt">TicketTitle</span>(value))
+    }
+}
+
+<span class="tk">pub struct</span> <span class="tt">Ticket</span> {
+    <span class="tk">pub</span> title: <span class="tt">TicketTitle</span>,                 <span class="tc">// les champs peuvent devenir pub !</span>
+    <span class="tk">pub</span> description: <span class="tt">TicketDescription</span>,
+    <span class="tk">pub</span> status: <span class="tt">Status</span>,
+}</code></pre>
+  <p>Chaque champ porte sa propre validation. Un <code>TicketTitle</code> qui existe est forcément valide, donc plus besoin de cacher les champs de <code>Ticket</code> derrière des getters/setters comme au chapitre 03. Exception : une règle qui concerne <strong>plusieurs champs à la fois</strong> obligerait à les rendre privés de nouveau.</p>
+</section>
+
+<!-- ============ CRATES ============ -->
+<section id="crates">
+  <h2><span class="num">§6</span>Packages, crates, dépendances, modules</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Terme</th><th>Ce que c'est</th></tr></thead>
+    <tbody>
+      <tr><td>package</td><td>un dossier avec un <code>Cargo.toml</code> ; son nom sert à <code>cargo test -p</code></td></tr>
+      <tr><td>crate binaire</td><td>racine <code>src/main.rs</code>, contient <code>fn main()</code>, on l'exécute</td></tr>
+      <tr><td>crate bibliothèque</td><td>racine <code>src/lib.rs</code>, du code réutilisable ; porte le nom du package</td></tr>
+      <tr><td>dépendance</td><td>une crate externe (crates.io) listée sous <code>[dependencies]</code></td></tr>
+      <tr><td>dev-dependency</td><td>utilisée seulement par les tests (<code>[dev-dependencies]</code>, ex. <code>common</code>)</td></tr>
+    </tbody>
+  </table></div>
+<pre><code><span class="tc"># Cargo.toml</span>
+[dependencies]
+anyhow = <span class="ts">"1"</span>          <span class="tc"># n'importe quelle 1.x compatible</span>
+thiserror = <span class="ts">"1"</span>       <span class="tc"># ou : cargo add thiserror</span></code></pre>
+  <ul>
+    <li>Un package peut avoir <code>main.rs</code> <strong>et</strong> <code>lib.rs</code>. Le binaire importe la bibliothèque par le nom du package : <code>use packages::hello_world;</code> (la fonction doit être <code>pub</code>).</li>
+    <li>Un chemin d'import commence par le nom de la crate : <code>use anyhow::Error;</code>, <code>thiserror::Error</code>.</li>
+  </ul>
+
+  <h3>Un module dans son propre fichier</h3>
+<pre><code><span class="tc">// src/lib.rs</span>
+<span class="tk">mod</span> status;                   <span class="tc">// Rust va chercher src/status.rs</span>
+<span class="tk">pub use</span> status::<span class="tt">Status</span>;       <span class="tc">// ré-export : les utilisateurs écrivent outro_04::Status</span></code></pre>
+  <p>Le fichier porte le nom du module et se place dans le même dossier que le fichier qui le déclare. Le pattern « modules privés + <code>pub use</code> à la racine » cache l'organisation interne tout en exposant l'API.</p>
+</section>
+
+<!-- ============ EXERCICES ============ -->
+<section id="exercices">
+  <h2><span class="num">§7</span>Les exercices un par un</h2>
+  <p class="intro">Clique sur un exercice pour voir le code, le principe et les pièges. Les noms de package sont entre parenthèses (pour <code>cargo test -p</code>).</p>
+  <div class="tools">
+    <button type="button" id="openAll">Tout ouvrir</button>
+    <button type="button" id="closeAll">Tout fermer</button>
+  </div>
+
+  <details class="ex" id="ex00">
+    <summary><span class="exid">00</span><span class="extitle">intro<small>(intro_04)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">fn</span> intro() -&gt; &amp;<span class="tk">'static</span> <span class="tt">str</span> {
+    <span class="ts">"I'm ready to refine the `Ticket` type!"</span>
+}</code></pre>
+      <ul><li>Piège : tu avais mis un <code>panic!(…)</code> au lieu de renvoyer la chaîne, et des apostrophes <code>'Ticket'</code> au lieu des backticks <code>`Ticket`</code>. La comparaison est exacte, caractère par caractère.</li></ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex01">
+    <summary><span class="exid">01</span><span class="extitle">enum<small>Remplacer <code>status: String</code> par un enum (enum_)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">#[derive(Debug, PartialEq)]</span>
+<span class="tk">struct</span> <span class="tt">Ticket</span> { title: <span class="tt">String</span>, description: <span class="tt">String</span>, status: <span class="tt">Status</span> }
+
+<span class="tk">#[derive(Debug, PartialEq, Clone, Copy)]</span>
+<span class="tk">enum</span> <span class="tt">Status</span> { ToDo, InProgress, Done }
+
+<span class="tk">pub fn</span> new(title: <span class="tt">String</span>, description: <span class="tt">String</span>, status: <span class="tt">Status</span>) -&gt; <span class="tt">Ticket</span> { … }   <span class="tc">// plus de if sur le statut</span>
+<span class="tk">pub fn</span> status(&amp;<span class="tk">self</span>) -&gt; &amp;<span class="tt">Status</span> { &amp;<span class="tk">self</span>.status }</code></pre>
+      <ul>
+        <li>Piège : <code>Clone, Copy</code> mis sur <code>Ticket</code> au lieu de <code>Status</code>. <code>Ticket</code> contient des <code>String</code> → <span class="err">E0204</span>.</li>
+        <li><code>Copy</code> sur <code>Status</code> : les tests réutilisent la même variable <code>status</code> pour deux tickets. Sans <code>Copy</code>, elle est déplacée dans le premier → <span class="err">E0382</span> use of moved value.</li>
+        <li>Le <code>if status != "To-Do" …</code> disparaît : le type garantit déjà la validité.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex02">
+    <summary><span class="exid">02</span><span class="extitle">match<small>Nombre de côtés d'une forme (match_)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">pub fn</span> n_sides(&amp;<span class="tk">self</span>) -&gt; <span class="tt">u8</span> {
+    <span class="tk">match</span> <span class="tk">self</span> {
+        <span class="tt">Shape</span>::Circle =&gt; <span class="tn">0</span>,
+        <span class="tt">Shape</span>::Square | <span class="tt">Shape</span>::Rectangle =&gt; <span class="tn">4</span>,
+        <span class="tt">Shape</span>::Triangle =&gt; <span class="tn">3</span>,
+        <span class="tt">Shape</span>::Pentagon =&gt; <span class="tn">5</span>,
+    }
+}</code></pre>
+      <ul><li><code>|</code> regroupe deux variantes qui donnent le même résultat. Pas de <code>_</code> : toutes les variantes sont listées, le compilateur protège les futurs ajouts.</li></ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex03">
+    <summary><span class="exid">03</span><span class="extitle">variants_with_data<small>Extraire <code>assigned_to</code> (variants_with_data)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">pub fn</span> assigned_to(&amp;<span class="tk">self</span>) -&gt; &amp;<span class="tt">str</span> {
+    <span class="tk">match</span> &amp;<span class="tk">self</span>.status {
+        <span class="tt">Status</span>::InProgress { assigned_to } =&gt; assigned_to,
+        _ =&gt; panic!(<span class="ts">"Only `In-Progress` tickets can be assigned to someone"</span>),
+    }
+}</code></pre>
+      <ul>
+        <li><code>_</code> = <code>ToDo | Done</code>. Le message du <code>panic!</code> doit correspondre au <code>#[should_panic(expected = …)]</code>.</li>
+        <li><code>assigned_to</code> est un <code>&amp;String</code>, converti en <code>&amp;str</code> par deref coercion (chap. 04).</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex04">
+    <summary><span class="exid">04</span><span class="extitle">if_let<small>Rayon d'un cercle (if_let)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">pub fn</span> radius(&amp;<span class="tk">self</span>) -&gt; <span class="tt">f64</span> {
+    <span class="tk">if let</span> <span class="tt">Shape</span>::Circle { radius } = <span class="tk">self</span> {
+        *radius
+    } <span class="tk">else</span> {
+        panic!(<span class="ts">"Not a circle"</span>)
+    }
+}</code></pre>
+      <ul>
+        <li>Piège : tu avais un <code>;</code> après la dernière accolade (<code>else { panic!(…) };</code>). La fonction renvoyait <code>()</code> → <span class="err">mismatched types</span> expected <code>f64</code>.</li>
+        <li><code>*radius</code> : <code>self</code> est une référence, donc <code>radius</code> est un <code>&amp;f64</code>. <code>f64</code> est <code>Copy</code>, le déréférencement copie la valeur.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex05">
+    <summary><span class="exid">05</span><span class="extitle">nullability<small><code>Option</code> au lieu de panic (nullability)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">pub fn</span> assigned_to(&amp;<span class="tk">self</span>) -&gt; <span class="tt">Option</span>&lt;&amp;<span class="tt">String</span>&gt; {
+    <span class="tk">match</span> &amp;<span class="tk">self</span>.status {
+        <span class="tt">Status</span>::InProgress { assigned_to } =&gt; Some(assigned_to),
+        _ =&gt; None,
+    }
+}</code></pre>
+      <ul><li>Même structure que le 03 : seul ce qu'on fait des cas change (<code>Some</code>/<code>None</code> au lieu d'une valeur/panic).</li></ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex06">
+    <summary><span class="exid">06</span><span class="extitle">fallibility<small><code>new</code> renvoie un <code>Result</code> (fallibility)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">pub fn</span> new(title: <span class="tt">String</span>, description: <span class="tt">String</span>, status: <span class="tt">Status</span>) -&gt; <span class="tt">Result</span>&lt;<span class="tt">Ticket</span>, <span class="tt">String</span>&gt; {
+    <span class="tk">if</span> title.is_empty() {
+        <span class="tk">return</span> Err(<span class="ts">"Title cannot be empty"</span>.to_string());
+    }
+    <span class="tc">// … idem pour les 3 autres règles</span>
+    Ok(<span class="tt">Ticket</span> { title, description, status })
+}</code></pre>
+      <ul>
+        <li>Piège : signature laissée à <code>-&gt; Ticket</code> → <span class="err">mismatched types</span> expected <code>Ticket</code>, found <code>Result</code>.</li>
+        <li><code>.to_string()</code> : <code>"…"</code> est un <code>&amp;str</code>, le type d'erreur est <code>String</code>.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex07">
+    <summary><span class="exid">07</span><span class="extitle">unwrap<small>Description par défaut si invalide (unwrap)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">fn</span> easy_ticket(title: <span class="tt">String</span>, description: <span class="tt">String</span>, status: <span class="tt">Status</span>) -&gt; <span class="tt">Ticket</span> {
+    <span class="tk">match</span> <span class="tt">Ticket</span>::new(title.clone(), description, status.clone()) {
+        Ok(ticket) =&gt; ticket,
+        Err(error) =&gt; {
+            <span class="tk">if</span> error.contains(<span class="ts">"Description"</span>) {
+                <span class="tt">Ticket</span>::new(title, <span class="ts">"Description not provided"</span>.to_string(), status).unwrap()
+            } <span class="tk">else</span> {
+                panic!(<span class="ts">"{}"</span>, error)
+            }
+        }
+    }
+}</code></pre>
+      <ul>
+        <li><code>.clone()</code> : le premier appel déplace <code>title</code> et <code>status</code> ; on en garde une copie pour le second essai.</li>
+        <li><code>.unwrap()</code> est sûr ici : la description par défaut est valide.</li>
+        <li>Faiblesse : distinguer les erreurs par leur texte. L'exo 08 corrige ça.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex08">
+    <summary><span class="exid">08</span><span class="extitle">error_enums<small>Un enum pour les erreurs (error_enums)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">#[derive(Debug)]</span>
+<span class="tk">enum</span> <span class="tt">TicketNewError</span> {
+    TitleError(<span class="tt">String</span>),
+    DescriptionError(<span class="tt">String</span>),
+}
+
+<span class="tk">fn</span> easy_ticket(title: <span class="tt">String</span>, description: <span class="tt">String</span>, status: <span class="tt">Status</span>) -&gt; <span class="tt">Ticket</span> {
+    <span class="tk">match</span> <span class="tt">Ticket</span>::new(title.clone(), description, status.clone()) {
+        Ok(ticket) =&gt; ticket,
+        Err(<span class="tt">TicketNewError</span>::TitleError(error)) =&gt; panic!(<span class="ts">"{}"</span>, error),
+        Err(<span class="tt">TicketNewError</span>::DescriptionError(_)) =&gt; {
+            <span class="tt">Ticket</span>::new(title, <span class="ts">"Description not provided"</span>.to_string(), status).unwrap()
+        }
+    }
+}
+<span class="tc">// dans new : return Err(TicketNewError::TitleError("Title cannot be empty".to_string()));</span></code></pre>
+      <ul>
+        <li>Deux TODO dans le fichier : l'enum vide <strong>et</strong> <code>new</code> devaient être modifiés, pas seulement <code>easy_ticket</code>.</li>
+        <li>Piège : <code>title.clone</code> sans parenthèses → on désigne la méthode au lieu de l'appeler.</li>
+        <li>Piège : <code>#[derive(Debug)]</code> manquant. <code>.unwrap()</code> doit pouvoir afficher l'erreur s'il panique.</li>
+        <li>Les motifs s'imbriquent : <code>Err(TicketNewError::TitleError(error))</code> ouvre le <code>Result</code> puis l'enum d'erreur.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex09">
+    <summary><span class="exid">09</span><span class="extitle">error_trait<small>Debug, Display, Error à la main (error_trait)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">#[derive(Debug)]</span>
+<span class="tk">enum</span> <span class="tt">TicketNewError</span> { TitleError(<span class="tt">String</span>), DescriptionError(<span class="tt">String</span>) }
+
+<span class="tk">impl</span> std::fmt::<span class="tt">Display</span> <span class="tk">for</span> <span class="tt">TicketNewError</span> {
+    <span class="tk">fn</span> fmt(&amp;<span class="tk">self</span>, f: &amp;<span class="tk">mut</span> std::fmt::<span class="tt">Formatter</span>&lt;<span class="tk">'_</span>&gt;) -&gt; std::fmt::<span class="tt">Result</span> {
+        <span class="tk">match</span> <span class="tk">self</span> {
+            <span class="tt">TicketNewError</span>::TitleError(msg) =&gt; write!(f, <span class="ts">"{}"</span>, msg),
+            <span class="tt">TicketNewError</span>::DescriptionError(msg) =&gt; write!(f, <span class="ts">"{}"</span>, msg),
+        }
+    }
+}
+
+<span class="tk">impl</span> std::error::<span class="tt">Error</span> <span class="tk">for</span> <span class="tt">TicketNewError</span> {}</code></pre>
+      <ul>
+        <li>Piège : l'<code>impl Error</code> oublié. Le test <code>assert_impl_one!(TicketNewError: std::error::Error)</code> le vérifie à la compilation.</li>
+        <li><code>write!(f, …)</code> fonctionne comme <code>println!</code> mais écrit dans le <code>Formatter</code>.</li>
+        <li><code>easy_ticket</code> : identique au 08.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex10">
+    <summary><span class="exid">10</span><span class="extitle">packages<small>Créer une crate bibliothèque (packages)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tc">// nouveau fichier : src/lib.rs (à côté de main.rs)</span>
+<span class="tk">pub fn</span> hello_world() {}</code></pre>
+      <ul><li>Aucun test : réussir à compiler suffit. <code>main.rs</code> fait <code>use packages::hello_world;</code>, le nom du package dans <code>Cargo.toml</code>.</li></ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex11">
+    <summary><span class="exid">11</span><span class="extitle">dependencies<small>Ajouter <code>anyhow</code> (deps)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tc"># Cargo.toml de l'exo</span>
+[dependencies]
+anyhow = <span class="ts">"1"</span></code></pre>
+      <ul><li>On ne touche pas à <code>lib.rs</code> : son <code>use anyhow::Error;</code> compile dès que la dépendance existe. Équivalent : <code>cargo add anyhow</code>.</li></ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex12">
+    <summary><span class="exid">12</span><span class="extitle">thiserror<small>Dériver <code>Error</code> (thiserror_)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tc"># Cargo.toml : thiserror = "1"</span>
+
+<span class="tk">#[derive(Debug, thiserror::Error)]</span>
+<span class="tk">enum</span> <span class="tt">TicketNewError</span> {
+    <span class="tk">#[error(</span><span class="ts">"Title cannot be empty"</span><span class="tk">)]</span>
+    TitleCannotBeEmpty,
+    <span class="tk">#[error(</span><span class="ts">"Title cannot be longer than 50 bytes"</span><span class="tk">)]</span>
+    TitleTooLong,
+    <span class="tk">#[error(</span><span class="ts">"Description cannot be empty"</span><span class="tk">)]</span>
+    DescriptionCannotBeEmpty,
+    <span class="tk">#[error(</span><span class="ts">"Description cannot be longer than 500 bytes"</span><span class="tk">)]</span>
+    DescriptionTooLong,
+}</code></pre>
+      <ul><li>Le même résultat que le 09, en 10 lignes. Les variantes n'ont plus de <code>String</code> : le message est fixé par <code>#[error]</code>.</li></ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex13">
+    <summary><span class="exid">13</span><span class="extitle">try_from<small><code>&amp;str</code>/<code>String</code> → <code>Status</code> (tryfrom)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">impl</span> <span class="tt">TryFrom</span>&lt;&amp;<span class="tt">str</span>&gt; <span class="tk">for</span> <span class="tt">Status</span> {
+    <span class="tk">type</span> <span class="tt">Error</span> = <span class="tt">String</span>;
+    <span class="tk">fn</span> try_from(value: &amp;<span class="tt">str</span>) -&gt; <span class="tt">Result</span>&lt;<span class="tt">Self</span>, <span class="tt">Self</span>::<span class="tt">Error</span>&gt; {
+        <span class="tk">match</span> value.to_lowercase().as_str() {
+            <span class="ts">"todo"</span> =&gt; Ok(<span class="tt">Status</span>::ToDo),
+            <span class="ts">"inprogress"</span> =&gt; Ok(<span class="tt">Status</span>::InProgress),
+            <span class="ts">"done"</span> =&gt; Ok(<span class="tt">Status</span>::Done),
+            _ =&gt; Err(format!(<span class="ts">"Invalid status: {}"</span>, value)),
+        }
+    }
+}
+
+<span class="tk">impl</span> <span class="tt">TryFrom</span>&lt;<span class="tt">String</span>&gt; <span class="tk">for</span> <span class="tt">Status</span> {
+    <span class="tk">type</span> <span class="tt">Error</span> = <span class="tt">String</span>;
+    <span class="tk">fn</span> try_from(value: <span class="tt">String</span>) -&gt; <span class="tt">Result</span>&lt;<span class="tt">Self</span>, <span class="tt">Self</span>::<span class="tt">Error</span>&gt; {
+        <span class="tt">Status</span>::try_from(value.as_str())
+    }
+}</code></pre>
+    </div>
+  </details>
+
+  <details class="ex" id="ex14">
+    <summary><span class="exid">14</span><span class="extitle">source<small>Chaîner une erreur, module dans un fichier (source)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tc">// ajouté à l'enum TicketNewError</span>
+    <span class="tk">#[error(</span><span class="ts">"{0}"</span><span class="tk">)]</span>
+    InvalidStatus(<span class="tk">#[from]</span> status::<span class="tt">ParseStatusError</span>),
+
+<span class="tc">// dans new, à la place du TODO</span>
+<span class="tk">let</span> status = <span class="tt">Status</span>::try_from(status)?;</code></pre>
+      <ul>
+        <li><code>{0}</code> réaffiche le message de l'erreur contenue  : <code>"`invalid` is not a valid status. Use one of: ToDo, InProgress, Done"</code>.</li>
+        <li><code>#[from]</code> : source (<code>err.source().is_some()</code>) + <code>From</code> généré pour le <code>?</code>.</li>
+        <li><code>mod status;</code> dans <code>lib.rs</code> charge <code>src/status.rs</code>.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex15">
+    <summary><span class="exid">15</span><span class="extitle">outro<small>Newtypes validés dans 3 modules (outro_04)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tc">// src/title.rs (description.rs est identique avec 500)</span>
+<span class="tk">#[derive(Debug, PartialEq, Clone)]</span>
+<span class="tk">pub struct</span> <span class="tt">TicketTitle</span>(<span class="tt">String</span>);
+
+<span class="tk">#[derive(Debug, thiserror::Error)]</span>
+<span class="tk">pub enum</span> <span class="tt">TicketTitleError</span> {
+    <span class="tk">#[error(</span><span class="ts">"The title cannot be empty"</span><span class="tk">)]</span>
+    Empty,
+    <span class="tk">#[error(</span><span class="ts">"The title cannot be longer than 50 bytes"</span><span class="tk">)]</span>
+    TooLong,
+}
+
+<span class="tk">impl</span> <span class="tt">TryFrom</span>&lt;<span class="tt">String</span>&gt; <span class="tk">for</span> <span class="tt">TicketTitle</span> {
+    <span class="tk">type</span> <span class="tt">Error</span> = <span class="tt">TicketTitleError</span>;
+    <span class="tk">fn</span> try_from(value: <span class="tt">String</span>) -&gt; <span class="tt">Result</span>&lt;<span class="tt">Self</span>, <span class="tt">Self</span>::<span class="tt">Error</span>&gt; {
+        <span class="tk">if</span> value.is_empty() { <span class="tk">return</span> Err(<span class="tt">TicketTitleError</span>::Empty); }
+        <span class="tk">if</span> value.len() &gt; <span class="tn">50</span> { <span class="tk">return</span> Err(<span class="tt">TicketTitleError</span>::TooLong); }
+        Ok(<span class="tt">TicketTitle</span>(value))
+    }
+}
+
+<span class="tk">impl</span> <span class="tt">TryFrom</span>&lt;&amp;<span class="tt">str</span>&gt; <span class="tk">for</span> <span class="tt">TicketTitle</span> {
+    <span class="tk">type</span> <span class="tt">Error</span> = <span class="tt">TicketTitleError</span>;
+    <span class="tk">fn</span> try_from(value: &amp;<span class="tt">str</span>) -&gt; <span class="tt">Result</span>&lt;<span class="tt">Self</span>, <span class="tt">Self</span>::<span class="tt">Error</span>&gt; {
+        <span class="tt">TicketTitle</span>::try_from(value.to_string())
+    }
+}
+
+<span class="tc">// src/status.rs : derive(Debug, PartialEq, Clone) + ParseStatusError (thiserror)
+// + les deux TryFrom comme au 13/14.
+// Cargo.toml : thiserror = "1"</span></code></pre>
+      <ul>
+        <li>Fait par Claude. Les « traits required to make the tests pass » : <code>Debug</code> (pour <code>unwrap</code>/<code>unwrap_err</code>), <code>PartialEq</code> (pour <code>assert_eq!</code> sur <code>Status</code>), <code>Clone</code> (exigé par le derive de <code>Ticket</code>), <code>Display</code> via thiserror (pour <code>err.to_string()</code>).</li>
+        <li>Ici c'est la version <code>&amp;str</code> qui appelle la version <code>String</code> (l'inverse du 13), parce que la struct a besoin d'une <code>String</code> possédée.</li>
+        <li>11 tests passent.</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ============ ORAL ============ -->
+<section id="oral">
+  <h2><span class="num">§8</span>Questions d'oral</h2>
+  <p class="intro">Réponds à voix haute avant d'ouvrir la réponse.</p>
+  <div class="tools">
+    <button type="button" id="revealAll">Tout révéler</button>
+    <button type="button" id="hideAll">Tout masquer</button>
+  </div>
+  <div class="quiz">
+    <details class="q"><summary>Pourquoi un enum <code>Status</code> est-il meilleur qu'un <code>status: String</code> ?</summary><div class="a">Il ne peut valoir que ses variantes : une valeur invalide ne compile pas. Plus besoin de validation à l'exécution, et le compilateur vérifie chaque usage.</div></details>
+    <details class="q"><summary>Que veut dire « <code>match</code> est exhaustif » ? Pourquoi c'est un avantage ?</summary><div class="a">Toutes les variantes doivent être traitées, sinon E0004. Si on ajoute une variante, le compilateur liste tous les <code>match</code> à mettre à jour (compiler-driven refactoring).</div></details>
+    <details class="q"><summary>Que fait <code>_</code> dans un <code>match</code> ? Quel est son inconvénient ?</summary><div class="a">Il attrape tous les cas non traités au-dessus. Inconvénient : une nouvelle variante tombe silencieusement dedans, sans alerte du compilateur.</div></details>
+    <details class="q"><summary>Dans <code>Status::InProgress { assigned_to } =&gt; assigned_to</code>, que se passe-t-il ?</summary><div class="a">Le motif vérifie que c'est la variante <code>InProgress</code> et extrait son champ dans une variable <code>assigned_to</code>, utilisable après <code>=&gt;</code>.</div></details>
+    <details class="q"><summary>Pourquoi écrire <code>match &amp;self.status</code> plutôt que <code>match self.status</code> ?</summary><div class="a">Pour emprunter : on ne peut pas déplacer la <code>String</code> hors de <code>self</code> qu'on ne possède pas. Avec <code>&amp;</code>, les données extraites sont des références.</div></details>
+    <details class="q"><summary>Quand utiliser <code>if let</code> plutôt que <code>match</code> ?</summary><div class="a">Quand un seul cas nous intéresse ; le reste va dans le <code>else</code> (ou rien). <code>let … else</code> sert à sortir tôt si le motif ne correspond pas.</div></details>
+    <details class="q"><summary>Pourquoi un <code>;</code> en trop à la fin d'une fonction casse-t-il le type de retour ?</summary><div class="a">La dernière expression sans <code>;</code> est la valeur renvoyée. Avec <code>;</code>, c'est une instruction : la fonction renvoie <code>()</code>.</div></details>
+    <details class="q"><summary>Comment Rust représente-t-il l'absence de valeur ? Pourquoi pas de <code>null</code> ?</summary><div class="a"><code>Option&lt;T&gt;</code> : <code>Some(v)</code> ou <code>None</code>. L'absence est dans le type, donc on est obligé de la traiter ; pas de null pointer exception possible.</div></details>
+    <details class="q"><summary>Différence entre <code>panic!</code> et renvoyer <code>Err</code> ?</summary><div class="a"><code>panic!</code> arrête le programme, l'appelant ne peut rien faire. <code>Err</code> est une valeur renvoyée : l'appelant décide (afficher, réessayer, valeur par défaut). On panique pour un bug, on renvoie <code>Err</code> pour une erreur prévisible.</div></details>
+    <details class="q"><summary>Pourquoi faut-il changer le type de retour en <code>Result&lt;Ticket, String&gt;</code> et écrire <code>Ok(...)</code> ?</summary><div class="a">Une fonction ne renvoie qu'un type. <code>Result</code> peut contenir soit le ticket, soit l'erreur. Le succès doit donc aussi être emballé, dans <code>Ok</code>.</div></details>
+    <details class="q"><summary>Que fait <code>.unwrap()</code> ? Pourquoi exige-t-il <code>Debug</code> sur l'erreur ?</summary><div class="a">Il sort la valeur d'un <code>Ok</code>/<code>Some</code>, et panique sur <code>Err</code>/<code>None</code>. En paniquant il affiche l'erreur avec <code>{:?}</code>, d'où <code>Debug</code>.</div></details>
+    <details class="q"><summary>Que fait l'opérateur <code>?</code> ?</summary><div class="a">Sur <code>Ok(v)</code> il donne <code>v</code> ; sur <code>Err(e)</code> il fait <code>return Err(e.into())</code>. Il ne marche que dans une fonction qui renvoie un <code>Result</code>/<code>Option</code>, et convertit l'erreur via <code>From</code>.</div></details>
+    <details class="q"><summary>Pourquoi un enum d'erreurs vaut mieux qu'une <code>String</code> d'erreur ?</summary><div class="a">L'appelant distingue les cas par <code>match</code> sur la variante au lieu de chercher des mots dans un texte, ce qui est fragile.</div></details>
+    <details class="q"><summary><code>Debug</code>, <code>Display</code>, <code>Error</code> : rôle de chacun, lesquels peut-on dériver ?</summary><div class="a"><code>Debug</code> : affichage développeur <code>{:?}</code>, dérivable. <code>Display</code> : affichage utilisateur <code>{}</code>, à écrire (ou via thiserror). <code>Error</code> : marque une erreur, exige <code>Debug + Display</code>, bloc vide suffisant.</div></details>
+    <details class="q"><summary>Qu'apporte <code>thiserror</code> ?</summary><div class="a">Un derive <code>thiserror::Error</code> qui génère <code>Display</code> à partir des <code>#[error("…")]</code> et <code>impl Error</code>, plus <code>#[from]</code>/<code>#[source]</code> pour chaîner les erreurs.</div></details>
+    <details class="q"><summary>À quoi sert <code>source()</code> et que fait <code>#[from]</code> ?</summary><div class="a"><code>source()</code> donne l'erreur d'origine (chaîne de causes). <code>#[from]</code> la déclare comme source et génère un <code>From</code>, ce qui permet au <code>?</code> de convertir automatiquement.</div></details>
+    <details class="q"><summary>Différence entre <code>From</code> et <code>TryFrom</code> ?</summary><div class="a"><code>From</code> ne peut pas échouer et renvoie <code>Self</code>. <code>TryFrom</code> peut échouer et renvoie <code>Result&lt;Self, Self::Error&gt;</code>, avec un type associé <code>Error</code>.</div></details>
+    <details class="q"><summary>Pourquoi l'exo 15 peut rendre les champs de <code>Ticket</code> publics ?</summary><div class="a">Chaque champ est un newtype qui ne peut exister que valide (construction via <code>TryFrom</code> uniquement). Aucune modification ne peut casser les règles, sauf une règle portant sur plusieurs champs.</div></details>
+    <details class="q"><summary>Package, crate binaire, crate bibliothèque : différences ?</summary><div class="a">Package : dossier avec <code>Cargo.toml</code>. Binaire : <code>src/main.rs</code> avec <code>main()</code>. Bibliothèque : <code>src/lib.rs</code>, réutilisable, porte le nom du package. Un package peut avoir les deux.</div></details>
+    <details class="q"><summary>Comment ajouter une dépendance ? Et mettre un module dans un fichier séparé ?</summary><div class="a"><code>[dependencies] nom = "1"</code> dans <code>Cargo.toml</code> (ou <code>cargo add nom</code>). Module : <code>mod status;</code> dans <code>lib.rs</code> + fichier <code>src/status.rs</code>.</div></details>
+  </div>
+</section>
+
+<footer>Fiche construite à partir de ton travail sur <code>exercises/05_ticket_v2</code> (00 à 15, non commité), de nos échanges et du cours <code>book/src/05_ticket_v2</code>. Fiche précédente : <a href="04_traits.html">04_traits.html</a>.</footer>
+</main>
+</div>
+
+<script>
+(function(){
+  var set = function(sel, open){ document.querySelectorAll(sel).forEach(function(d){ d.open = open; }); };
+  document.getElementById('openAll').addEventListener('click', function(){ set('details.ex', true); });
+  document.getElementById('closeAll').addEventListener('click', function(){ set('details.ex', false); });
+  document.getElementById('revealAll').addEventListener('click', function(){ set('details.q', true); });
+  document.getElementById('hideAll').addEventListener('click', function(){ set('details.q', false); });
+  document.querySelectorAll('nav.toc a[href^="#ex"]').forEach(function(a){
+    a.addEventListener('click', function(){
+      var d = document.querySelector(a.getAttribute('href'));
+      if (d && d.tagName === 'DETAILS') d.open = true;
+    });
+  });
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var targets = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (!e.isIntersecting) return;
+        var i = targets.indexOf(e.target);
+        links.forEach(function(l){ l.classList.remove('active'); });
+        if (i >= 0) links[i].classList.add('active');
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    targets.forEach(function(t){ if (t) io.observe(t); });
+  }
+})();
+</script>
+</body>
+</html>

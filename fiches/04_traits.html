@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Traits Rust</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --bg:#f5f6f7; --surface:#ffffff; --surface-2:#eceef1; --ink:#1b2127; --ink-2:#4a545e; --muted:#6c7680;
+  --line:#d9dde2; --accent:#b4461a; --accent-soft:#f6e3d8; --accent-ink:#8a3310;
+  --code-bg:#1d2329; --code-ink:#e4e7ea; --k:#ff9f6b; --t:#7fd1c7; --s:#c3e88d; --c:#7c8a96; --n:#f2c46d; --m:#b6a6ff;
+  --ok:#2f7d4f; --ok-soft:#e1f1e7; --warn:#9a6a00; --warn-soft:#fbefd0; --bad:#b0302c; --bad-soft:#f8e0de;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"IBM Plex Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#13171b; --surface:#1a1f24; --surface-2:#232a30; --ink:#e6e9ec; --ink-2:#b3bcc4; --muted:#8a949d;
+    --line:#2e363d; --accent:#f08a5a; --accent-soft:#3a2419; --accent-ink:#ffb48f;
+    --code-bg:#0e1215; --ok:#6fcf97; --ok-soft:#18301f; --warn:#e8bd55; --warn-soft:#33290f; --bad:#f08a86; --bad-soft:#3a1c1b;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#13171b; --surface:#1a1f24; --surface-2:#232a30; --ink:#e6e9ec; --ink-2:#b3bcc4; --muted:#8a949d;
+  --line:#2e363d; --accent:#f08a5a; --accent-soft:#3a2419; --accent-ink:#ffb48f;
+  --code-bg:#0e1215; --ok:#6fcf97; --ok-soft:#18301f; --warn:#e8bd55; --warn-soft:#33290f; --bad:#f08a86; --bad-soft:#3a1c1b;
+}
+*{box-sizing:border-box}
+main a,footer a{color:var(--accent-ink);text-underline-offset:2px}
+code,pre,.tree,.bits{font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{background:var(--bg);color:var(--ink);font:16px/1.65 var(--body);padding-inline:16px}
+.shell{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:230px minmax(0,1fr);gap:48px;padding-block:40px 80px}
+@media (max-width:900px){.shell{grid-template-columns:minmax(0,1fr);gap:24px;padding-block:24px 60px}}
+
+/* nav */
+nav.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px);align-self:start;font-size:14px}
+nav.toc .brand{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px}
+nav.toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+nav.toc a{display:block;color:var(--ink-2);text-decoration:none;padding:5px 10px;border-radius:6px;border-left:2px solid transparent}
+nav.toc a:hover{background:var(--surface-2);color:var(--ink)}
+nav.toc a.active{color:var(--accent-ink);border-left-color:var(--accent);background:var(--accent-soft);border-radius:0 6px 6px 0}
+nav.toc .sub a{padding-left:22px;font-family:var(--mono);font-size:12.5px}
+@media (max-width:900px){
+  nav.toc{position:static}
+  nav.toc ol{flex-direction:row;flex-wrap:wrap;gap:6px}
+  nav.toc .sub{display:none}
+  nav.toc a{border:1px solid var(--line);border-radius:999px;padding:4px 12px}
+  nav.toc a.active{border-radius:999px;border-color:var(--accent)}
+}
+
+main{min-width:0}
+header.hero{padding-bottom:28px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.eyebrow{font-family:var(--mono);font-size:12.5px;color:var(--accent);letter-spacing:.05em}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(34px,5vw,52px);line-height:1.05;margin:8px 0 14px;text-wrap:balance;letter-spacing:-.01em}
+.lede{color:var(--ink-2);max-width:62ch;margin:0;font-size:17px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--mono);font-size:12px;padding:3px 10px;border-radius:999px;background:var(--surface-2);color:var(--ink-2)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+
+section{padding-top:44px}
+h2{font-family:var(--display);font-weight:800;font-size:clamp(24px,3vw,30px);line-height:1.15;margin:0 0 6px;text-wrap:balance}
+h2 .num{font-family:var(--mono);font-weight:400;font-size:.55em;color:var(--accent);vertical-align:.35em;margin-right:8px}
+h3{font-family:var(--display);font-weight:600;font-size:20px;margin:28px 0 8px;text-wrap:balance}
+h4{font-size:15px;font-weight:600;margin:20px 0 6px}
+p,li{max-width:70ch}
+p{margin:10px 0}
+ul,ol{padding-left:22px;margin:8px 0}
+li{margin:4px 0}
+.intro{color:var(--ink-2)}
+strong{font-weight:600}
+code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);padding:1px 5px;border-radius:4px}
+pre{margin:14px 0;background:var(--code-bg);color:var(--code-ink);border-radius:10px;padding:16px 18px;overflow-x:auto;font:13.5px/1.6 var(--mono)}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.tk{color:var(--k)} .tt{color:var(--t)} .ts{color:var(--s)} .tc{color:var(--c);font-style:italic} .tn{color:var(--n)} .tm{color:var(--m)}
+
+.tablewrap{overflow-x:auto;margin:14px 0;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;background:var(--surface-2);font-size:13px;color:var(--ink-2)}
+tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:13px;white-space:nowrap}
+
+.say{margin:18px 0;padding:14px 18px;background:var(--accent-soft);border-radius:10px;color:var(--ink)}
+.say b{display:block;font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:4px;font-weight:600}
+.warn{margin:14px 0;padding:12px 16px;background:var(--warn-soft);border-radius:10px}
+.warn b{color:var(--warn)}
+
+/* principles */
+.principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:18px 0}
+.pr{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pr .i{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.pr h4{margin:4px 0 6px;font-size:15.5px}
+.pr p{margin:0;font-size:14px;color:var(--ink-2)}
+
+/* pipeline */
+.pipeline{display:flex;flex-direction:column;gap:0;margin:18px 0;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+.stage{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.stage:last-child{border-bottom:0}
+.stage .n{font-family:var(--mono);color:var(--muted);font-size:13px;padding-top:2px}
+.stage h4{margin:0}
+.stage p{margin:2px 0 0;font-size:14px;color:var(--ink-2)}
+.stage.hl{background:var(--accent-soft)}
+.stage.hl .n{color:var(--accent-ink)}
+.err{font-family:var(--mono);font-size:12px;color:var(--bad);white-space:nowrap}
+
+/* exercises */
+details.ex{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin:12px 0}
+details.ex[open]{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+details.ex>summary{cursor:pointer;list-style:none;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 18px}
+details.ex>summary::-webkit-details-marker{display:none}
+details.ex>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:12px}
+.exid{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:600}
+.extitle{font-weight:600}
+.extitle small{display:block;font-weight:400;color:var(--muted);font-size:13.5px}
+.chev{color:var(--muted);transition:transform .2s}
+details[open] .chev{transform:rotate(90deg)}
+.exbody{padding:0 18px 18px;border-top:1px solid var(--line)}
+.flag{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:2px}
+.flag.w{background:var(--warn-soft);color:var(--warn)}
+.tools{display:flex;gap:8px;margin:14px 0 4px;flex-wrap:wrap}
+button{font:500 13px var(--body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{background:var(--surface-2)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ring */
+.ring{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:24px;align-items:center;margin:16px 0}
+@media (max-width:640px){.ring{grid-template-columns:minmax(0,1fr)}}
+.ring svg{width:100%;max-width:260px;height:auto}
+.bits{font-family:var(--mono);font-size:14px;display:flex;gap:3px;flex-wrap:wrap}
+.bits span{width:24px;height:28px;display:grid;place-items:center;border-radius:4px;background:var(--surface-2)}
+.bits span.sign{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+
+/* quiz */
+.quiz{counter-reset:q;display:flex;flex-direction:column;gap:8px;margin-top:14px}
+details.q{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+details.q>summary{cursor:pointer;list-style:none;padding:12px 16px;display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:10px;align-items:baseline}
+details.q>summary::-webkit-details-marker{display:none}
+details.q>summary::before{counter-increment:q;content:counter(q);font-family:var(--mono);font-size:13px;color:var(--accent)}
+details.q>summary::after{content:"Réponse";font-size:12px;color:var(--muted);font-family:var(--mono)}
+details.q[open]>summary::after{content:"Masquer"}
+details.q>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
+details.q .a{padding:0 16px 14px 58px;color:var(--ink-2)}
+@media (max-width:520px){details.q .a{padding-left:16px}}
+footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+</style>
+<style>
+.flag.b{background:var(--bad-soft);color:var(--bad)}
+.flag.o{background:var(--ok-soft);color:var(--ok)}
+.progress{display:grid;grid-template-columns:repeat(13,minmax(0,1fr));gap:4px;margin-top:18px;max-width:560px}
+.progress span{height:8px;border-radius:2px;background:var(--surface-2)}
+.progress span.done{background:var(--accent)}
+.progress-legend{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:6px}
+.receivers{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:18px 0}
+.rcv{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.rcv code.big{font-size:17px;background:none;padding:0;color:var(--accent-ink);font-weight:600}
+.rcv .what{font-size:13px;color:var(--muted);margin:2px 0 8px;font-family:var(--mono)}
+.rcv p{margin:6px 0 0;font-size:14px;color:var(--ink-2)}
+.rcv .use{font-size:13.5px;margin-top:8px}
+.lock{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:16px 0}
+.lock>div{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--surface)}
+.lock h4{margin:0 0 6px}
+.lock .tag{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tree{font:13.5px/1.7 var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;overflow-x:auto;white-space:pre;color:var(--ink)}
+.tree .p{color:var(--bad)} .tree .u{color:var(--ok)} .tree .m{color:var(--muted)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:700px){.two{grid-template-columns:minmax(0,1fr)}}
+.two pre{margin:0}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin:10px 0 4px}
+.todo{border:1px dashed var(--line);border-radius:12px;padding:14px 18px;color:var(--ink-2);margin:12px 0}
+.todo ul{margin:6px 0 0}
+</style>
+<style>
+.progress.p15{grid-template-columns:repeat(15,minmax(0,1fr))}
+.vs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin:16px 0}
+@media (max-width:700px){.vs{grid-template-columns:minmax(0,1fr)}}
+.vs>div{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--surface)}
+.vs h4{margin:0 0 6px}
+.vs .tag{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.vs pre{margin:10px 0 0}
+</style>
+
+</head>
+<body>
+<div class="shell">
+<nav class="toc" aria-label="Sommaire">
+  <div class="brand">Chapitre 04</div>
+  <ol>
+    <li><a href="#avancement">Où tu en es</a></li>
+    <li><a href="#principes">Premiers principes</a></li>
+    <li><a href="#traits">Définir &amp; implémenter</a></li>
+    <li><a href="#regles">Orphan rule</a></li>
+    <li><a href="#std">Traits de std</a></li>
+    <li><a href="#generiques">Génériques</a></li>
+    <li><a href="#texte">String, &amp;str, str</a></li>
+    <li><a href="#syntaxe">Syntaxe</a></li>
+    <li><a href="#exercices">Exercices</a></li>
+    <li class="sub"><a href="#ex00">00 intro</a></li>
+    <li class="sub"><a href="#ex01">01 trait</a></li>
+    <li class="sub"><a href="#ex02">02 orphan_rule</a></li>
+    <li class="sub"><a href="#ex03">03 overloading</a></li>
+    <li class="sub"><a href="#ex04">04 derive</a></li>
+    <li class="sub"><a href="#ex05">05 trait_bounds</a></li>
+    <li class="sub"><a href="#ex06">06 str_slice</a></li>
+    <li class="sub"><a href="#ex07">07 deref</a></li>
+    <li class="sub"><a href="#ex08">08 sized</a></li>
+    <li class="sub"><a href="#ex09">09 from</a></li>
+    <li class="sub"><a href="#ex10">10 assoc_vs_generic</a></li>
+    <li class="sub"><a href="#ex11">11 clone</a></li>
+    <li class="sub"><a href="#ex12">12 copy</a></li>
+    <li class="sub"><a href="#ex13">13 drop</a></li>
+    <li class="sub"><a href="#ex14">14 outro</a></li>
+    <li><a href="#oral">Questions d'oral</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="hero" id="avancement">
+  <div class="eyebrow">100 exercises to learn Rust · 04_traits</div>
+  <h1>Fiche synthèse&nbsp;: Traits</h1>
+  <p class="lede">Le chapitre des <strong>traits</strong> : des contrats qu'un type s'engage à respecter. C'est ce qui fait marcher <code>==</code>, <code>+</code>, <code>.into()</code>, <code>.clone()</code>, l'affichage <code>{:?}</code> ou le nettoyage automatique. On y voit aussi les <strong>génériques</strong> et enfin la vraie différence entre <code>String</code>, <code>&amp;str</code> et <code>str</code>.</p>
+  <div class="meta">
+    <span class="chip">15 exercices sur 15</span>
+    <span class="chip ok">tous les tests passent</span>
+    <span class="chip">travail non commité</span>
+  </div>
+  <div class="progress p15" aria-label="15 exercices faits sur 15">
+    <span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span>
+  </div>
+  <div class="progress-legend">chapitre terminé · suite : 05_ticket_v2 (enums)</div>
+</header>
+
+<!-- ============ PRINCIPES ============ -->
+<section id="principes">
+  <h2><span class="num">§0</span>Les premiers principes du chapitre</h2>
+  <p class="intro">Le chapitre 03 créait des types. Le chapitre 04 leur donne des <strong>capacités communes</strong>.</p>
+  <div class="principles">
+    <div class="pr"><span class="i">principe 1</span><h4>Un trait est un contrat</h4><p>Il déclare des méthodes (nom, paramètres, retour) sans forcément les coder. Un type « signe » le contrat avec un <code>impl</code>.</p></div>
+    <div class="pr"><span class="i">principe 2</span><h4>Les opérateurs sont des traits</h4><p><code>a == b</code> appelle <code>PartialEq::eq</code>, <code>a + b</code> appelle <code>Add::add</code>. Implémenter le trait, c'est faire marcher l'opérateur.</p></div>
+    <div class="pr"><span class="i">principe 3</span><h4>Une seule implémentation possible</h4><p>Jamais d'ambiguïté : une impl par couple (trait, type), et l'orphan rule empêche deux crates d'en écrire chacune une.</p></div>
+    <div class="pr"><span class="i">principe 4</span><h4>Un générique nu ne sait rien faire</h4><p><code>T</code> peut être n'importe quel type. Les <em>trait bounds</em> disent ce que <code>T</code> sait faire, et c'est écrit dans la signature.</p></div>
+    <div class="pr"><span class="i">principe 5</span><h4>Aucune conversion implicite</h4><p>Même « évidente ». <code>u32</code> → <code>WrappingU32</code> exige un <code>From</code>. Seule exception notable : la deref coercion (<code>&amp;String</code> → <code>&amp;str</code>).</p></div>
+  </div>
+  <div class="say"><b>À savoir dire</b>« Un trait définit un comportement partagé. Rust s'en sert à la fois pour la surcharge d'opérateurs, pour ajouter des méthodes à des types existants, et pour la programmation générique, où les trait bounds expriment ce qu'un type paramètre doit savoir faire. »</div>
+</section>
+
+<!-- ============ TRAITS ============ -->
+<section id="traits">
+  <h2><span class="num">§1</span>Définir et implémenter un trait</h2>
+
+  <h3>Les deux étapes</h3>
+<pre><code><span class="tc">// 1. Le contrat : une déclaration, terminée par ;</span>
+<span class="tk">trait</span> <span class="tt">IsEven</span> {
+    <span class="tk">fn</span> is_even(&amp;<span class="tk">self</span>) -&gt; <span class="tt">bool</span>;
+}
+
+<span class="tc">// 2. Un type signe le contrat, et donne le code</span>
+<span class="tk">impl</span> <span class="tt">IsEven</span> <span class="tk">for</span> <span class="tt">u32</span> {
+    <span class="tk">fn</span> is_even(&amp;<span class="tk">self</span>) -&gt; <span class="tt">bool</span> {
+        <span class="tk">self</span> % <span class="tn">2</span> == <span class="tn">0</span>
+    }
+}
+
+<span class="tn">42u32</span>.is_even()   <span class="tc">// ✅   42u8.is_even() ❌ : u8 n'a pas signé</span></code></pre>
+  <ul>
+    <li>Un trait sans aucun <code>impl</code> ne sert à rien.</li>
+    <li>Un <code>impl</code> doit fournir <strong>tout</strong> ce que le trait exige (méthodes et types associés), avec des signatures <strong>identiques</strong>.</li>
+    <li>On écrit <strong>une impl par type</strong> : <code>u32</code> et <code>i32</code> → deux blocs.</li>
+    <li><strong>Pas de <code>pub</code></strong> devant les méthodes d'un <code>impl Trait for Type</code> (<span class="err">E0449</span>) : la visibilité vient du trait.</li>
+  </ul>
+
+  <h3>Méthode par défaut</h3>
+  <p>Un trait peut donner un corps à une méthode. Les impl la reçoivent gratuitement. Exemple réel, <code>PartialEq</code> (source simplifiée de <code>core/src/cmp.rs</code>) :</p>
+<pre><code><span class="tk">pub trait</span> <span class="tt">PartialEq</span>&lt;<span class="tt">Rhs</span> = <span class="tt">Self</span>&gt; {
+    <span class="tk">fn</span> eq(&amp;<span class="tk">self</span>, other: &amp;<span class="tt">Rhs</span>) -&gt; <span class="tt">bool</span>;          <span class="tc">// à écrire</span>
+    <span class="tk">fn</span> ne(&amp;<span class="tk">self</span>, other: &amp;<span class="tt">Rhs</span>) -&gt; <span class="tt">bool</span> {         <span class="tc">// par défaut</span>
+        !<span class="tk">self</span>.eq(other)
+    }
+}</code></pre>
+  <p>On écrit seulement <code>eq</code>, et <code>!=</code> marche tout seul.</p>
+
+  <h3>Deux sortes d'<code>impl</code></h3>
+  <div class="vs">
+    <div><span class="tag">méthodes inhérentes</span><h4><code>impl Ticket { … }</code></h4><p>Pas de trait, noms <strong>libres</strong>. Réservé à <strong>tes</strong> types : <code>impl u32 { … }</code> est interdit (<span class="err">E0390</span>).</p><p>C'est tout le chapitre 03 : <code>new</code>, getters, setters.</p></div>
+    <div><span class="tag">implémentation de trait</span><h4><code>impl PartialEq for Ticket { … }</code></h4><p>Noms <strong>imposés</strong> par le trait. Possible sur un type étranger si le trait est à toi.</p><p>Apporte une capacité standard : <code>==</code>, <code>+</code>, <code>.into()</code>, <code>{:?}</code>…</p></div>
+  </div>
+  <p>Un même type a souvent les deux (ton <code>WrappingU32</code> : <code>impl WrappingU32 { fn new }</code> + <code>impl Add for WrappingU32</code>). L'ordre des blocs dans le fichier n'a aucune importance.</p>
+
+  <h3>Struct ou trait ?</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th></th><th>struct (<code>DropBomb</code>, <code>Ticket</code>)</th><th>trait (<code>Drop</code>, <code>PartialEq</code>)</th></tr></thead>
+    <tbody>
+      <tr><td>Ce que c'est</td><td>un type : il <strong>est</strong> quelque chose</td><td>un contrat : ce qu'un type <strong>sait faire</strong></td></tr>
+      <tr><td>Contient</td><td>des données (champs)</td><td>des signatures de méthodes</td></tr>
+      <tr><td>On en crée des valeurs ?</td><td>oui (<code>DropBomb::new()</code>)</td><td>non, on l'implémente <strong>pour</strong> un type</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ REGLES ============ -->
+<section id="regles">
+  <h2><span class="num">§2</span>Ce que Rust autorise : l'orphan rule</h2>
+  <p class="intro">Une <strong>crate</strong> est un paquet de code : chaque exo en est une, et <code>std</code> aussi. « À toi » = défini dans ta crate.</p>
+  <h3>Règle 1 : une seule impl par couple (trait, type)</h3>
+  <p>Deux <code>impl IsEven for u32</code> dans la même crate : <span class="err">E0119</span> conflicting implementations. Rust ne saurait pas laquelle appeler.</p>
+  <h3>Règle 2 : l'orphan rule</h3>
+  <p>Pour écrire <code>impl Trait for Type</code>, <strong>le trait OU le type doit être à toi</strong>.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Trait</th><th>Type</th><th>Autorisé</th><th>Exemple</th></tr></thead>
+    <tbody>
+      <tr><td>à toi</td><td>étranger</td><td>✅</td><td><code>impl IsEven for u32</code> (exo 01)</td></tr>
+      <tr><td>étranger</td><td>à toi</td><td>✅</td><td><code>impl PartialEq for Ticket</code> (exo 03) — le cas le plus courant</td></tr>
+      <tr><td>à toi</td><td>à toi</td><td>✅</td><td><code>impl IsEven for Ticket</code></td></tr>
+      <tr><td>étranger</td><td>étranger</td><td>❌ <span class="err">E0117</span></td><td><code>impl PartialEq for u32</code> (exo 02)</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Pourquoi :</strong> si la crate B et la crate C écrivaient chacune <code>impl IsEven for u32</code>, un projet qui utilise les deux ne saurait pas laquelle choisir pour <code>4.is_even()</code>. Avec la règle, seuls ceux qui possèdent le trait ou le type peuvent écrire l'impl : le conflit est impossible.</p>
+  <p><strong>Extension trait :</strong> un trait créé pour ajouter des méthodes à un type étranger (<code>IsEven</code> pour <code>u32</code>). C'est le contournement officiel de l'interdiction <code>impl u32 { … }</code>.</p>
+  <p><strong>Newtype :</strong> emballer un type étranger dans une struct à soi (<code>WrappingU32 { value: u32 }</code>) pour pouvoir lui donner d'autres comportements, par exemple un autre <code>+</code>.</p>
+</section>
+
+<!-- ============ STD ============ -->
+<section id="std">
+  <h2><span class="num">§3</span>Les traits de std vus dans le chapitre</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Trait</th><th>Module</th><th>Débloque</th><th>Comment l'obtenir</th></tr></thead>
+    <tbody>
+      <tr><td><code>PartialEq</code></td><td>std::cmp</td><td><code>==</code>, <code>!=</code>, <code>assert_eq!</code></td><td><code>derive</code>, ou impl (avec <code>Rhs</code> pour comparer à un autre type)</td></tr>
+      <tr><td><code>PartialOrd</code></td><td>std::cmp</td><td><code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code></td><td><code>derive</code> ou impl</td></tr>
+      <tr><td><code>Debug</code></td><td>std::fmt</td><td><code>{:?}</code>, affichage dans <code>assert_eq!</code></td><td><code>derive</code></td></tr>
+      <tr><td><code>Clone</code></td><td>std::clone</td><td><code>.clone()</code> : copie complète explicite</td><td><code>derive</code></td></tr>
+      <tr><td><code>Copy</code></td><td>std::marker</td><td>copie implicite au lieu du move</td><td><code>derive(Clone, Copy)</code>, si tous les champs sont <code>Copy</code></td></tr>
+      <tr><td><code>Add</code></td><td>std::ops</td><td><code>+</code></td><td>impl à la main, <strong><code>use std::ops::Add;</code> obligatoire</strong></td></tr>
+      <tr><td><code>From</code> / <code>Into</code></td><td>std::convert</td><td><code>T::from(x)</code>, <code>x.into()</code></td><td>impl <code>From</code> ; <code>Into</code> vient gratuitement</td></tr>
+      <tr><td><code>Deref</code></td><td>std::ops</td><td><code>&amp;String</code> → <code>&amp;str</code>, méthodes de <code>str</code> sur <code>String</code></td><td>déjà fait par std pour <code>String</code></td></tr>
+      <tr><td><code>Drop</code></td><td>std::ops</td><td>code exécuté à la destruction</td><td>impl à la main</td></tr>
+      <tr><td><code>Sized</code></td><td>std::marker</td><td>« taille connue à la compilation »</td><td>automatique (auto trait)</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Le prelude :</strong> liste d'éléments importés automatiquement partout (<code>PartialEq</code>, <code>PartialOrd</code>, <code>Clone</code>, <code>Copy</code>, <code>Drop</code>, <code>From</code>, <code>Into</code>, <code>String</code>, <code>Vec</code>…). Pas besoin de <code>use</code> pour eux. <code>Add</code> n'en fait <strong>pas</strong> partie.</p>
+
+  <h3><code>derive</code> : des impl générées</h3>
+<pre><code><span class="tk">#[derive(Debug, PartialEq, Clone, Copy)]</span>   <span class="tc">// s'applique à l'élément juste en dessous</span>
+<span class="tk">pub struct</span> <span class="tt">WrappingU32</span> { value: <span class="tt">u32</span> }</code></pre>
+  <ul>
+    <li>Une <strong>macro</strong> est un générateur de code (<code>println!</code>, <code>assert_eq!</code>…). <code>derive</code> est une macro qui écrit l'impl à ta place, champ par champ.</li>
+    <li>Ça ne marche que si <strong>tous les champs</strong> implémentent déjà le trait (« les derive sont récursifs »).</li>
+    <li>L'impl dérivée reste à jour si tu ajoutes un champ, contrairement à une impl manuelle.</li>
+  </ul>
+
+  <h3><code>Clone</code>, <code>Copy</code>, <code>Drop</code></h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th></th><th>Clone</th><th>Copy</th><th>Drop</th></tr></thead>
+    <tbody>
+      <tr><td>Déclenché</td><td>explicitement, <code>.clone()</code></td><td>implicitement, à chaque affectation ou passage</td><td>implicitement, en fin de portée</td></tr>
+      <tr><td>Coût</td><td>peut être cher (alloue sur le tas)</td><td>copie octet par octet, bon marché</td><td>ton code</td></tr>
+      <tr><td>Possible pour <code>String</code></td><td>✅</td><td>❌ (gère du tas)</td><td>déjà fait par std</td></tr>
+      <tr><td>Contrainte</td><td>tous les champs <code>Clone</code></td><td>exige <code>Clone</code> ; tous les champs <code>Copy</code> ; <strong>incompatible avec <code>Drop</code></strong> (<span class="err">E0184</span>)</td><td>empêche <code>Copy</code></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ GENERIQUES ============ -->
+<section id="generiques">
+  <h2><span class="num">§4</span>Génériques et trait bounds</h2>
+<pre><code><span class="tk">pub fn</span> min&lt;<span class="tt">T</span>: <span class="tt">PartialOrd</span>&gt;(left: <span class="tt">T</span>, right: <span class="tt">T</span>) -&gt; <span class="tt">T</span> {
+    <span class="tk">if</span> left &lt;= right { left } <span class="tk">else</span> { right }
+}</code></pre>
+  <ul>
+    <li><code>&lt;T&gt;</code> déclare un <strong>paramètre de type</strong>, un « type à trou ». Une seule fonction pour <code>u32</code>, <code>i64</code>, <code>String</code>…</li>
+    <li>Un <code>T</code> nu ne sait <strong>rien</strong> faire. Le bound <code>T: PartialOrd</code> dit : « n'importe quel type, à condition qu'il sache faire <code>&lt;=</code> ».</li>
+    <li>Le bound est une <strong>contrainte</strong>, pas un appel : c'est <code>&lt;=</code> qui appelle <code>PartialOrd</code> en coulisses.</li>
+    <li>Plusieurs bounds : <code>T: IsEven + Debug</code> (« et »). Syntaxe longue : <code>where T: IsEven + Debug</code>.</li>
+    <li><strong>La signature est le contrat :</strong> le compilateur ne devine pas les bounds à partir du corps.</li>
+    <li>Tout générique est implicitement <code>Sized</code>. <code>T: ?Sized</code> lève cette contrainte (seul usage de <code>?</code> dans un bound).</li>
+  </ul>
+
+  <h3>Générique ou type associé ?</h3>
+  <div class="vs">
+    <div><span class="tag">paramètre générique</span><h4><code>trait From&lt;T&gt;</code></h4><p><strong>Plusieurs</strong> impl pour un même type, une par <code>T</code> : <code>From&lt;u16&gt;</code> et <code>From&lt;u32&gt;</code> sont deux traits différents.</p><p>Pour : ce qui <strong>varie</strong> (type d'entrée).</p></div>
+    <div><span class="tag">type associé</span><h4><code>type Target;</code> / <code>type Output;</code></h4><p><strong>Une seule</strong> valeur par impl : une <code>String</code> ne peut se « deref » qu'en <code>str</code>.</p><p>Pour : ce qui doit être <strong>déterminé</strong> sans ambiguïté (type de sortie).</p></div>
+  </div>
+  <p><code>Add</code> combine les deux :</p>
+<pre><code><span class="tk">pub trait</span> <span class="tt">Add</span>&lt;<span class="tt">Rhs</span> = <span class="tt">Self</span>&gt; {   <span class="tc">// Rhs = "right-hand side", ce qu'on met à droite du +</span>
+    <span class="tk">type</span> <span class="tt">Output</span>;              <span class="tc">// le type du résultat</span>
+    <span class="tk">fn</span> add(<span class="tk">self</span>, rhs: <span class="tt">Rhs</span>) -&gt; <span class="tt">Self</span>::<span class="tt">Output</span>;
+}</code></pre>
+  <div class="warn"><b>Un même nom de paramètre = un même type.</b> Dans <code>fn power(&amp;self, n: Rhs) -&gt; Rhs</code>, l'entrée et la sortie seraient forcées au même type. C'est l'erreur de l'exo 10 : il fallait <code>-&gt; u32</code>.</div>
+</section>
+
+<!-- ============ TEXTE ============ -->
+<section id="texte">
+  <h2><span class="num">§5</span><code>String</code>, <code>&amp;str</code>, <code>str</code></h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Type</th><th>Ce que c'est</th><th>Taille sur la pile</th></tr></thead>
+    <tbody>
+      <tr><td><code>str</code></td><td>le texte lui-même (une suite d'octets UTF-8). On ne le manipule jamais directement.</td><td class="num">inconnue (DST)</td></tr>
+      <tr><td><code>String</code></td><td>du texte qu'on <strong>possède</strong>, sur le tas, qui peut grandir</td><td class="num">24 (ptr + len + cap)</td></tr>
+      <tr><td><code>&amp;String</code></td><td>une flèche vers une <code>String</code> entière</td><td class="num">8 (ptr)</td></tr>
+      <tr><td><code>&amp;str</code></td><td>une <strong>vue</strong> sur tout ou partie d'un texte, sans le posséder</td><td class="num">16 (ptr + len)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Pourquoi <code>&amp;str</code> peut pointer au milieu</h3>
+<div class="tree">title : [ptr | len 14 | cap 14]          &amp;title[0..3] : [ptr | len 3]
+          │                                           │
+          v                                           v
+Tas :   [ B | u | g |   | l | o | g | i | n |   | p | a | g | e ]
+          └───────┘  <span class="m">"Bug" : on pointe dans la String existante, sans copie</span></div>
+  <p>Un <code>&amp;String</code> ne peut désigner que la <code>String</code> entière. Pour renvoyer « Bug » en <code>&amp;String</code>, il faudrait créer une nouvelle <code>String</code>.</p>
+  <ul>
+    <li><strong>Règle :</strong> on <strong>stocke</strong> une <code>String</code> (je possède) et on <strong>prête</strong> un <code>&amp;str</code> (je montre). Getters en <code>-&gt; &amp;str</code>, paramètres en <code>&amp;str</code>.</li>
+    <li><code>"To-Do"</code> est un <code>&amp;'static str</code> : un texte écrit dans le programme, qui existe toute l'exécution. D'où les <code>.to_string()</code> / <code>.into()</code> pour obtenir une <code>String</code>.</li>
+  </ul>
+
+  <h3>Deref coercion</h3>
+  <p><code>String</code> implémente <code>Deref&lt;Target = str&gt;</code>. Conséquences :</p>
+  <ol>
+    <li>un <code>&amp;String</code> est converti automatiquement en <code>&amp;str</code> quand il le faut (exo 06) ;</li>
+    <li>toutes les méthodes de <code>str</code> qui prennent <code>&amp;self</code> sont appelables sur une <code>String</code> : <code>self.title.trim()</code> (exo 07).</li>
+  </ol>
+  <p>À ne pas abuser dans ses propres types : si <code>T</code> et sa cible ont une méthode du même nom, on ne sait plus laquelle est appelée.</p>
+
+  <h3><code>Sized</code> et fat pointers</h3>
+  <ul>
+    <li><code>str</code> est un <strong>DST</strong> (<em>dynamically sized type</em>) : sa taille dépend du texte. <code>size_of::&lt;str&gt;()</code> ne compile pas.</li>
+    <li>Une référence vers un DST doit emporter la longueur avec elle : c'est un <strong>fat pointer</strong> (16 octets au lieu de 8).</li>
+    <li><code>Sized</code> = « taille connue à la compilation ». C'est un <strong>marker trait</strong> (aucune méthode) et un <strong>auto trait</strong> (le compilateur l'ajoute seul). <code>u32</code>, <code>String</code>, <code>&amp;str</code> sont <code>Sized</code> ; <code>str</code> ne l'est pas.</li>
+  </ul>
+</section>
+
+<!-- ============ SYNTAXE ============ -->
+<section id="syntaxe">
+  <h2><span class="num">§6</span>Aide-mémoire de syntaxe</h2>
+<pre><code><span class="tc">// Définir un trait (nouveau seulement ! ne jamais redéfinir Drop, Clone…)</span>
+<span class="tk">trait</span> <span class="tt">Power</span>&lt;<span class="tt">Rhs</span>&gt; {
+    <span class="tk">fn</span> power(&amp;<span class="tk">self</span>, n: <span class="tt">Rhs</span>) -&gt; <span class="tt">u32</span>;
+}
+
+<span class="tc">// L'implémenter</span>
+<span class="tk">impl</span> <span class="tt">Power</span>&lt;<span class="tt">u16</span>&gt; <span class="tk">for</span> <span class="tt">u32</span> {
+    <span class="tk">fn</span> power(&amp;<span class="tk">self</span>, n: <span class="tt">u16</span>) -&gt; <span class="tt">u32</span> { <span class="tk">self</span>.pow(n <span class="tk">as</span> <span class="tt">u32</span>) }
+}
+
+<span class="tc">// Trait avec type associé</span>
+<span class="tk">use</span> std::ops::<span class="tt">Add</span>;
+<span class="tk">impl</span> <span class="tt">Add</span> <span class="tk">for</span> <span class="tt">WrappingU32</span> {
+    <span class="tk">type</span> <span class="tt">Output</span> = <span class="tt">WrappingU32</span>;
+    <span class="tk">fn</span> add(<span class="tk">self</span>, rhs: <span class="tt">Self</span>) -&gt; <span class="tt">Self</span>::<span class="tt">Output</span> { … }
+}
+
+<span class="tc">// Conversion</span>
+<span class="tk">impl</span> <span class="tt">From</span>&lt;<span class="tt">u32</span>&gt; <span class="tk">for</span> <span class="tt">WrappingU32</span> {
+    <span class="tk">fn</span> from(value: <span class="tt">u32</span>) -&gt; <span class="tt">Self</span> { <span class="tt">WrappingU32</span> { value } }
+}
+<span class="tk">let</span> w: <span class="tt">WrappingU32</span> = <span class="tn">42</span>.into();      <span class="tc">// type cible déduit de l'annotation</span>
+
+<span class="tc">// Générique avec bound</span>
+<span class="tk">fn</span> f&lt;<span class="tt">T</span>: <span class="tt">IsEven</span> + <span class="tt">Debug</span>&gt;(n: <span class="tt">T</span>) { … }
+<span class="tk">fn</span> g&lt;<span class="tt">T</span>&gt;(n: <span class="tt">T</span>) <span class="tk">where</span> <span class="tt">T</span>: <span class="tt">IsEven</span> + <span class="tt">Debug</span> { … }
+
+<span class="tc">// Déréférencer une référence</span>
+<span class="tk">let</span> x: <span class="tt">u32</span> = *r;                      <span class="tc">// r: &amp;u32</span>
+
+<span class="tc">// Slice de texte</span>
+&amp;s[<span class="tn">1</span>..]   &amp;s[<span class="tn">0</span>..<span class="tn">3</span>]   &amp;s[..]
+
+<span class="tc">// Déstructurer une struct</span>
+<span class="tk">let</span> <span class="tt">Ticket</span> { title, description, status } = <span class="tk">self</span>;</code></pre>
+
+  <h3>Petits outils rencontrés</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Élément</th><th>Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>x.pow(n)</code></td><td>puissance ; l'exposant doit être un <code>u32</code></td></tr>
+      <tr><td><code>x.wrapping_add(y)</code></td><td>addition qui revient à 0 après le max (<code>u32::MAX + 1 → 0</code>)</td></tr>
+      <tr><td><code>x.saturating_add(y)</code></td><td>addition qui reste bloquée au max</td></tr>
+      <tr><td><code>s.trim()</code></td><td>enlève les espaces au début et à la fin, renvoie un <code>&amp;str</code> (méthode de <code>str</code>)</td></tr>
+      <tr><td><code>{:?}</code> / <code>{:#?}</code></td><td>affichage <code>Debug</code>, sur une ligne / sur plusieurs</td></tr>
+      <tr><td><code>cargo test -p x -- --nocapture</code></td><td>voir les <code>println!</code> pendant les tests</td></tr>
+      <tr><td><code>rustup doc --std</code></td><td>doc de la bibliothèque standard hors ligne</td></tr>
+      <tr><td>⌘+clic sur un nom</td><td>ouvre sa définition dans VS Code</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ EXERCICES ============ -->
+<section id="exercices">
+  <h2><span class="num">§7</span>Les exercices un par un</h2>
+  <p class="intro">Clique sur un exercice pour voir ton code, le principe et les pièges. Les noms de package sont entre parenthèses (pour <code>cargo test -p</code>).</p>
+  <div class="tools">
+    <button type="button" id="openAll">Tout ouvrir</button>
+    <button type="button" id="closeAll">Tout fermer</button>
+  </div>
+
+  <details class="ex" id="ex00">
+    <summary><span class="exid">00</span><span class="extitle">intro<small>(intro_03)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">fn</span> intro() -&gt; &amp;<span class="tk">'static</span> <span class="tt">str</span> {
+    <span class="ts">"I'm ready to learn about traits!"</span>
+}</code></pre>
+    </div>
+  </details>
+
+  <details class="ex" id="ex01">
+    <summary><span class="exid">01</span><span class="extitle">trait<small>Définir <code>IsEven</code> et l'implémenter (trait_)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">trait</span> <span class="tt">IsEven</span> {
+    <span class="tk">fn</span> is_even(&amp;<span class="tk">self</span>) -&gt; <span class="tt">bool</span>;
+}
+
+<span class="tk">impl</span> <span class="tt">IsEven</span> <span class="tk">for</span> <span class="tt">u32</span> {
+    <span class="tk">fn</span> is_even(&amp;<span class="tk">self</span>) -&gt; <span class="tt">bool</span> { <span class="tk">self</span> % <span class="tn">2</span> == <span class="tn">0</span> }
+}
+
+<span class="tk">impl</span> <span class="tt">IsEven</span> <span class="tk">for</span> <span class="tt">i32</span> {
+    <span class="tk">fn</span> is_even(&amp;<span class="tk">self</span>) -&gt; <span class="tt">bool</span> { <span class="tk">self</span> % <span class="tn">2</span> == <span class="tn">0</span> }
+}</code></pre>
+      <ul>
+        <li>Le trait et ses impl se placent <strong>avant</strong> le module de test : <code>#[cfg(test)]</code> n'est compilé que pendant <code>cargo test</code>, et <code>use super::*;</code> importe ce qui est dans le module parent.</li>
+        <li>Le trait seul donnait <span class="err">E0599</span> no method named <code>is_even</code> found for <code>u32</code> : sans impl, aucun type n'a la méthode.</li>
+        <li><code>self % 2 == 0</code> est déjà un <code>bool</code>, pas besoin de <code>if</code>.</li>
+        <li><code>trait</code> est un mot réservé, d'où le nom de package <code>trait_</code>.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex02">
+    <summary><span class="exid">02</span><span class="extitle">orphan_rule<small>Observer l'erreur puis supprimer (orphan)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">impl</span> <span class="tt">PartialEq</span> <span class="tk">for</span> <span class="tt">u32</span> { … }   <span class="tc">// ❌ E0117 : trait étranger + type étranger</span></code></pre>
+      <ul>
+        <li>Exo « observer » : lancer, lire l'erreur, <strong>supprimer</strong> le bloc. Le laisser casserait un <code>cargo build</code> à la racine.</li>
+        <li><code>PartialEq</code> et <code>u32</code> viennent tous deux de <code>std</code>. Et <code>u32</code> a déjà son <code>PartialEq</code> : en écrire un autre rendrait <code>2 == 2</code> ambigu.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex03">
+    <summary><span class="exid">03</span><span class="extitle">operator_overloading<small><code>PartialEq</code> à la main (overloading)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">use</span> std::cmp::<span class="tt">PartialEq</span>;            <span class="tc">// inutile : dans le prelude</span>
+
+<span class="tk">impl</span> <span class="tt">PartialEq</span> <span class="tk">for</span> <span class="tt">Ticket</span> {
+    <span class="tk">fn</span> eq(&amp;<span class="tk">self</span>, other: &amp;<span class="tk">self</span>::<span class="tt">Ticket</span>) -&gt; <span class="tt">bool</span> {
+        <span class="tk">self</span>.title == other.title
+        &amp;&amp; <span class="tk">self</span>.description == other.description
+        &amp;&amp; <span class="tk">self</span>.status == other.status
+    }
+}</code></pre>
+      <ul>
+        <li>Implémenter <code>PartialEq</code> fait marcher <code>ticket1 == ticket2</code>, et <code>!=</code> par la méthode par défaut <code>ne</code>.</li>
+        <li>Autorisé par l'orphan rule : le trait est étranger, mais <code>Ticket</code> est à toi.</li>
+      </ul>
+      <div class="warn"><b>À nettoyer :</b> le <code>use std::cmp::PartialEq;</code> ne sert à rien. Et <code>&amp;self::Ticket</code> compile par hasard : ici <code>self::</code> est le <strong>chemin</strong> « module courant », pas la valeur <code>self</code>. Écris plutôt <code>other: &amp;Ticket</code> ou <code>other: &amp;Self</code>.</div>
+    </div>
+  </details>
+
+  <details class="ex" id="ex04">
+    <summary><span class="exid">04</span><span class="extitle">derive<small>Ajouter <code>Debug</code> (derives)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">#[derive(Debug, PartialEq)]</span>
+<span class="tk">struct</span> <span class="tt">Ticket</span> { title: <span class="tt">String</span>, description: <span class="tt">String</span>, status: <span class="tt">String</span> }</code></pre>
+      <ul>
+        <li><code>assert_eq!</code> et <code>assert_ne!</code> exigent <code>PartialEq</code> (comparer) <strong>et</strong> <code>Debug</code> (afficher les deux côtés en cas d'échec).</li>
+        <li>Un <code>derive</code> accepte plusieurs traits séparés par des virgules ; l'ordre ne compte pas.</li>
+        <li>Le cours présente aussi la <strong>déstructuration</strong> (<code>let Ticket { title, .. } = self;</code>), qui rend une impl manuelle robuste à l'ajout d'un champ.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex05">
+    <summary><span class="exid">05</span><span class="extitle">trait_bounds<small><code>min</code> générique (trait_bounds)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">pub fn</span> min&lt;<span class="tt">T</span>: <span class="tt">PartialOrd</span>&gt;(left: <span class="tt">T</span>, right: <span class="tt">T</span>) -&gt; <span class="tt">T</span> {
+    <span class="tk">if</span> left &lt;= right { left } <span class="tk">else</span> { right }
+}</code></pre>
+      <ul>
+        <li><code>&lt;=</code> est fourni par <code>PartialOrd</code> (std::cmp), comme <code>==</code> par <code>PartialEq</code>.</li>
+        <li>Le bound se met <strong>dans la signature</strong>, on ne l'« appelle » pas.</li>
+        <li><code>min(ticket1, ticket2)</code> serait refusé à la compilation : <code>Ticket</code> n'est pas <code>PartialOrd</code>.</li>
+        <li>D'autres bounds marcheraient (<code>Ord</code>), avec un sens différent ; expliqué plus tard avec les collections triées.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex06">
+    <summary><span class="exid">06</span><span class="extitle">str_slice<small>Getters en <code>&amp;str</code> (str_slice)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">pub fn</span> title(&amp;<span class="tk">self</span>) -&gt; &amp;<span class="tt">str</span> {   <span class="tc">// &amp;str au lieu de &amp;String</span>
+    &amp;<span class="tk">self</span>.title                 <span class="tc">// le corps ne change pas</span>
+}</code></pre>
+      <ul>
+        <li>On change seulement le <strong>type de retour</strong> des 3 getters. Les champs et <code>new</code> restent en <code>String</code> : le ticket doit posséder son texte.</li>
+        <li>Le test vérifie le type avec <code>TypeId</code> : un getter oublié le fait échouer.</li>
+        <li>Pourquoi le corps compile encore : c'est la deref coercion, sujet de l'exo 07.</li>
+        <li>Tu avais déjà eu ce réflexe à l'exo 12 du chapitre 3 (<code>product_name() -&gt; &amp;str</code>).</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex07">
+    <summary><span class="exid">07</span><span class="extitle">deref<small>Normaliser avec <code>trim</code> (deref)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">pub fn</span> title(&amp;<span class="tk">self</span>) -&gt; &amp;<span class="tt">str</span> {
+    <span class="tk">self</span>.title.trim()
+}
+<span class="tk">pub fn</span> description(&amp;<span class="tk">self</span>) -&gt; &amp;<span class="tt">str</span> {
+    <span class="tk">self</span>.description.trim()
+}</code></pre>
+      <ul>
+        <li><code>trim</code> n'est <strong>pas</strong> dans la doc de <code>String</code> : elle est définie sur <code>str</code>. Grâce à <code>Deref</code>, on l'appelle quand même sur une <code>String</code>.</li>
+        <li>Pas de <code>&amp;</code> devant : <code>trim</code> renvoie déjà un <code>&amp;str</code>, qui pointe <strong>dans</strong> le texte d'origine, sans copie.</li>
+      </ul>
+      <div class="warn"><b>Fausse piste :</b> chercher « deref » dans la doc menait à <code>as_str</code>, une API expérimentale (nightly). Il faut chercher ce que fait la méthode (« whitespace »), avec ⌘F dans la page de <code>str</code>.</div>
+    </div>
+  </details>
+
+  <details class="ex" id="ex08">
+    <summary><span class="exid">08</span><span class="extitle">sized<small>Observer l'erreur puis commenter (sized)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tc">// std::mem::size_of::&lt;str&gt;();   ❌ str n'a pas de taille connue à la compilation</span></code></pre>
+      <ul>
+        <li><code>str</code> est un DST : sa taille dépend du texte, donc <code>size_of</code> (qui exige un type <code>Sized</code>) refuse.</li>
+        <li><code>&amp;str</code>, lui, est <code>Sized</code> : 16 octets, pointeur + longueur.</li>
+        <li>Résumé : <code>str</code> inconnue, <code>String</code> 24, <code>&amp;String</code> 8, <code>&amp;str</code> 16.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex09">
+    <summary><span class="exid">09</span><span class="extitle">from<small><code>From&lt;u32&gt;</code> pour <code>WrappingU32</code> (from)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">impl</span> <span class="tt">From</span>&lt;<span class="tt">u32</span>&gt; <span class="tk">for</span> <span class="tt">WrappingU32</span> {
+    <span class="tk">fn</span> from(value: <span class="tt">u32</span>) -&gt; <span class="tt">Self</span> {
+        <span class="tt">WrappingU32</span> { value }
+    }
+}
+
+<span class="tk">let</span> wrapping: <span class="tt">WrappingU32</span> = <span class="tn">42</span>.into();   <span class="tc">// marche grâce à la blanket impl</span>
+<span class="tk">let</span> wrapping = <span class="tt">WrappingU32</span>::from(<span class="tn">42</span>);</code></pre>
+      <ul>
+        <li><code>.into()</code> n'est <strong>pas</strong> propre à <code>String</code> : c'est un convertisseur général, qui marche partout où un <code>From</code> existe.</li>
+        <li><strong>Blanket implementation</strong> dans std : si <code>U: From&lt;T&gt;</code>, alors <code>T: Into&lt;U&gt;</code>. On n'écrit que <code>From</code>.</li>
+        <li><code>u32</code> et <code>WrappingU32</code> sont deux types différents, même si l'un contient l'autre. Rust ne convertit jamais tout seul.</li>
+        <li><strong>Supertrait :</strong> <code>trait From&lt;T&gt;: Sized</code> = pour implémenter <code>From</code>, il faut aussi être <code>Sized</code>.</li>
+        <li>Pas de tests : il suffit que ça compile. Les avertissements « unused » sont normaux.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex10">
+    <summary><span class="exid">10</span><span class="extitle">assoc_vs_generic<small>Trait <code>Power</code> générique (assoc_vs_generic)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">trait</span> <span class="tt">Power</span>&lt;<span class="tt">Rhs</span>&gt; {
+    <span class="tk">fn</span> power(&amp;<span class="tk">self</span>, n: <span class="tt">Rhs</span>) -&gt; <span class="tt">u32</span>;
+}
+
+<span class="tk">impl</span> <span class="tt">Power</span>&lt;<span class="tt">u16</span>&gt;  <span class="tk">for</span> <span class="tt">u32</span> { <span class="tk">fn</span> power(&amp;<span class="tk">self</span>, n: <span class="tt">u16</span>)  -&gt; <span class="tt">u32</span> { <span class="tk">self</span>.pow(n <span class="tk">as</span> <span class="tt">u32</span>) } }
+<span class="tk">impl</span> <span class="tt">Power</span>&lt;<span class="tt">u32</span>&gt;  <span class="tk">for</span> <span class="tt">u32</span> { <span class="tk">fn</span> power(&amp;<span class="tk">self</span>, n: <span class="tt">u32</span>)  -&gt; <span class="tt">u32</span> { <span class="tk">self</span>.pow(n) } }
+<span class="tk">impl</span> <span class="tt">Power</span>&lt;&amp;<span class="tt">u32</span>&gt; <span class="tk">for</span> <span class="tt">u32</span> { <span class="tk">fn</span> power(&amp;<span class="tk">self</span>, n: &amp;<span class="tt">u32</span>) -&gt; <span class="tt">u32</span> { <span class="tk">self</span>.pow(*n) } }</code></pre>
+      <ul>
+        <li>L'exposant change de type selon le test (<code>u16</code>, <code>u32</code>, <code>&amp;u32</code>) → paramètre générique, une impl par type.</li>
+        <li>Le résultat est toujours un <code>u32</code> → type fixe.</li>
+        <li><code>2_u32.power(3u8)</code> ne compilerait pas : personne n'a écrit <code>Power&lt;u8&gt;</code>.</li>
+        <li><code>*n</code> = la valeur derrière la référence.</li>
+      </ul>
+      <div class="warn"><b>Erreur rencontrée :</b> <code>-&gt; Rhs</code> dans le trait imposait un retour du même type que l'exposant. Résultat : <span class="err">E0053</span> sur les impl <code>u16</code> et <code>&amp;u32</code>, pas sur <code>u32</code> (par hasard, entrée = sortie). Le soulignement était dans les impl, mais la faute dans le trait.</div>
+    </div>
+  </details>
+
+  <details class="ex" id="ex11">
+    <summary><span class="exid">11</span><span class="extitle">clone<small>Cloner avant de déplacer (clone)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">pub fn</span> summary(ticket: <span class="tt">Ticket</span>) -&gt; (<span class="tt">Ticket</span>, <span class="tt">Summary</span>) {
+    (ticket.clone(), ticket.summary())
+}
+
+<span class="tk">#[derive(Clone)]</span>
+<span class="tk">pub struct</span> <span class="tt">Ticket</span> { … }</code></pre>
+      <ul>
+        <li><strong>Le problème :</strong> <code>(ticket, ticket.summary())</code> déplace <code>ticket</code> dans le tuple, puis le réutilise → <span class="err">E0382</span>. Et <code>summary(self)</code> consomme le ticket.</li>
+        <li><strong>Deux choses :</strong> rendre <code>Ticket</code> clonable (<code>derive</code>) <strong>et</strong> appeler <code>.clone()</code>.</li>
+        <li><strong>L'ordre compte</strong> (évaluation de gauche à droite) : <code>(ticket.clone(), ticket.summary())</code> ✅, <code>(ticket, ticket.clone().summary())</code> ❌.</li>
+        <li><code>clone</code> fait une copie complète : nouvelle zone sur le tas, texte recopié.</li>
+      </ul>
+      <div class="say"><b>La règle</b>Tant qu'une valeur n'a été que <strong>prêtée</strong> (<code>&amp;</code>, <code>&amp;mut</code>), elle est à toi : tu peux la cloner. Une fois <strong>déplacée</strong> (<code>self</code>, donnée à un tuple, une fonction, une variable), tu ne peux plus rien en faire. Le premier paramètre d'une méthode dit ce qui va arriver : <code>&amp;self</code> je regarde, <code>&amp;mut self</code> je modifie, <code>self</code> je garde.</div>
+    </div>
+  </details>
+
+  <details class="ex" id="ex12">
+    <summary><span class="exid">12</span><span class="extitle">copy<small><code>Add</code> + <code>Copy</code> pour <code>WrappingU32</code> (copy)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">use</span> std::ops::<span class="tt">Add</span>;
+
+<span class="tk">#[derive(Debug, PartialEq, Clone, Copy)]</span>
+<span class="tk">pub struct</span> <span class="tt">WrappingU32</span> { value: <span class="tt">u32</span> }
+
+<span class="tk">impl</span> <span class="tt">Add</span> <span class="tk">for</span> <span class="tt">WrappingU32</span> {
+    <span class="tk">type</span> <span class="tt">Output</span> = <span class="tt">WrappingU32</span>;
+    <span class="tk">fn</span> add(<span class="tk">self</span>, rhs: <span class="tt">Self</span>) -&gt; <span class="tt">Self</span>::<span class="tt">Output</span> {
+        <span class="tt">WrappingU32</span>::new(<span class="tk">self</span>.value.wrapping_add(rhs.value))
+    }
+}</code></pre>
+      <ul>
+        <li><strong><code>Add</code></strong> fait marcher <code>+</code> ; <code>x + y</code> devient <code>x.add(y)</code>.</li>
+        <li><strong><code>Copy</code></strong> : le test utilise <code>y</code> deux fois. Sans <code>Copy</code>, le premier <code>+</code> le déplacerait.</li>
+        <li><strong><code>PartialEq</code> + <code>Debug</code></strong> pour <code>assert_eq!</code>.</li>
+        <li>On <strong>garde</strong> <code>impl WrappingU32 { fn new }</code> et on <strong>ajoute</strong> <code>impl Add</code> : deux blocs différents.</li>
+        <li>Résultat attendu 103 : 42 + 31 + 31 + <code>u32::MAX</code> = 104 + « un tour moins 1 ».</li>
+      </ul>
+      <div class="warn"><b>Erreurs rencontrées :</b> <code>pub fn add</code> → <span class="err">E0449</span> (pas de <code>pub</code> dans une impl de trait) ; <code>type Output</code> oublié → <span class="err">E0046</span> not all trait items implemented ; <code>derive</code> manquant → <span class="err">E0277</span> doesn't implement Debug.</div>
+    </div>
+  </details>
+
+  <details class="ex" id="ex13">
+    <summary><span class="exid">13</span><span class="extitle">drop<small>La DropBomb (drop)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">pub struct</span> <span class="tt">DropBomb</span> {
+    defused: <span class="tt">bool</span>,
+}
+
+<span class="tk">impl</span> <span class="tt">DropBomb</span> {
+    <span class="tk">pub fn</span> new() -&gt; <span class="tt">Self</span> { <span class="tt">DropBomb</span> { defused: <span class="tk">false</span> } }   <span class="tc">// armée</span>
+    <span class="tk">pub fn</span> defuse(&amp;<span class="tk">mut self</span>) { <span class="tk">self</span>.defused = <span class="tk">true</span>; }
+}
+
+<span class="tk">impl</span> <span class="tt">Drop</span> <span class="tk">for</span> <span class="tt">DropBomb</span> {
+    <span class="tk">fn</span> drop(&amp;<span class="tk">mut self</span>) {
+        <span class="tk">if</span> !<span class="tk">self</span>.defused {
+            <span class="tm">panic!</span>(<span class="ts">"Failed to defuse the bomb"</span>);
+        }
+    }
+}</code></pre>
+      <ul>
+        <li><code>drop</code> est appelé <strong>automatiquement</strong> à la fin de la portée. On n'écrit jamais <code>bomb.drop()</code>.</li>
+        <li>Test 1 (<code>#[should_panic]</code>) : bombe non désamorcée → panic attendu. Test 2 : <code>defuse()</code> puis fin de portée → rien.</li>
+        <li>Usage réel : forcer une action (valider une transaction) ; si on l'oublie, le programme plante au lieu d'échouer en silence.</li>
+        <li><code>DropBomb</code> est une <strong>struct</strong>, <code>Drop</code> est le <strong>trait</strong>.</li>
+      </ul>
+      <div class="warn"><b>Erreur rencontrée :</b> tu avais écrit <code>pub trait Drop { fn drop(&amp;mut self); }</code>. Ça crée un <strong>autre</strong> trait du même nom, que Rust n'appelle jamais à la destruction. Pour un trait de std, on <strong>implémente</strong>, on ne redéfinit pas.</div>
+    </div>
+  </details>
+
+  <details class="ex" id="ex14">
+    <summary><span class="exid">14</span><span class="extitle">outro<small><code>SaturatingU16</code>, tout le chapitre (outro_03)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">use</span> std::ops::<span class="tt">Add</span>;
+
+<span class="tk">#[derive(Debug, PartialEq, Clone, Copy)]</span>
+<span class="tk">pub struct</span> <span class="tt">SaturatingU16</span> { value: <span class="tt">u16</span> }
+
+<span class="tc">// 4 conversions : u16, u8, &amp;u16, &amp;u8</span>
+<span class="tk">impl</span> <span class="tt">From</span>&lt;<span class="tt">u8</span>&gt; <span class="tk">for</span> <span class="tt">SaturatingU16</span> {
+    <span class="tk">fn</span> from(value: <span class="tt">u8</span>) -&gt; <span class="tt">Self</span> { <span class="tt">SaturatingU16</span> { value: value.into() } }
+}
+<span class="tk">impl</span> <span class="tt">From</span>&lt;&amp;<span class="tt">u8</span>&gt; <span class="tk">for</span> <span class="tt">SaturatingU16</span> {
+    <span class="tk">fn</span> from(value: &amp;<span class="tt">u8</span>) -&gt; <span class="tt">Self</span> { <span class="tt">SaturatingU16</span> { value: (*value).into() } }
+}
+<span class="tc">// … From&lt;u16&gt;, From&lt;&amp;u16&gt;</span>
+
+<span class="tc">// 4 additions : Self, &amp;Self, u16, &amp;u16</span>
+<span class="tk">impl</span> <span class="tt">Add</span>&lt;<span class="tt">u16</span>&gt; <span class="tk">for</span> <span class="tt">SaturatingU16</span> {
+    <span class="tk">type</span> <span class="tt">Output</span> = <span class="tt">SaturatingU16</span>;
+    <span class="tk">fn</span> add(<span class="tk">self</span>, rhs: <span class="tt">u16</span>) -&gt; <span class="tt">Self</span>::<span class="tt">Output</span> {
+        <span class="tt">SaturatingU16</span> { value: <span class="tk">self</span>.value.saturating_add(rhs) }
+    }
+}
+<span class="tc">// … Add&lt;SaturatingU16&gt;, Add&lt;&amp;SaturatingU16&gt;, Add&lt;&amp;u16&gt;</span>
+
+<span class="tc">// comparer avec un u16</span>
+<span class="tk">impl</span> <span class="tt">PartialEq</span>&lt;<span class="tt">u16</span>&gt; <span class="tk">for</span> <span class="tt">SaturatingU16</span> {
+    <span class="tk">fn</span> eq(&amp;<span class="tk">self</span>, other: &amp;<span class="tt">u16</span>) -&gt; <span class="tt">bool</span> { <span class="tk">self</span>.value == *other }
+}</code></pre>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Trait</th><th>Impl</th><th>Comment</th><th>Notion</th></tr></thead>
+        <tbody>
+          <tr><td><code>Debug</code>, <code>PartialEq</code>, <code>Clone</code>, <code>Copy</code></td><td class="num">4</td><td>derive</td><td>exos 04, 11, 12</td></tr>
+          <tr><td><code>From&lt;…&gt;</code></td><td class="num">4</td><td>à la main</td><td>exos 09, 10</td></tr>
+          <tr><td><code>Add&lt;…&gt;</code></td><td class="num">4</td><td>à la main</td><td>exos 10, 12</td></tr>
+          <tr><td><code>PartialEq&lt;u16&gt;</code></td><td class="num">1</td><td>à la main</td><td>exo 03, <code>Rhs</code></td></tr>
+        </tbody>
+      </table></div>
+      <ul>
+        <li><code>u8.into()</code> → <code>u16</code> marche parce que std fournit <code>From&lt;u8&gt; for u16</code> (agrandir ne perd rien).</li>
+        <li><strong><code>saturating_add</code></strong> bloque au max (65535 + 10 → 65535), contrairement à <code>wrapping_add</code> (→ 9).</li>
+        <li><code>PartialEq</code> dérivé ne compare qu'avec le même type ; <code>a + a == 20u16</code> exige <code>PartialEq&lt;u16&gt;</code> écrit à la main.</li>
+        <li>Tests dans <code>tests/</code> → struct <code>pub</code>.</li>
+        <li>La répétition pourrait être évitée par une macro ; laissée telle quelle pour la lisibilité.</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ============ ORAL ============ -->
+<section id="oral">
+  <h2><span class="num">§8</span>Questions d'oral</h2>
+  <p class="intro">Réponds à voix haute avant d'ouvrir la réponse.</p>
+  <div class="tools">
+    <button type="button" id="revealAll">Tout révéler</button>
+    <button type="button" id="hideAll">Tout masquer</button>
+  </div>
+  <div class="quiz">
+    <details class="q"><summary>Qu'est-ce qu'un trait ? À quoi sert-il en Rust (trois usages) ?</summary><div class="a">Un contrat de méthodes qu'un type peut implémenter. Usages : débloquer un comportement intégré (opérateurs, <code>==</code>, <code>+</code>), ajouter des méthodes à des types existants (extension traits), et la programmation générique (trait bounds).</div></details>
+    <details class="q"><summary>Différence entre <code>impl Ticket { }</code> et <code>impl PartialEq for Ticket { }</code> ?</summary><div class="a">Le premier définit des méthodes inhérentes, aux noms libres, uniquement sur ses propres types. Le second remplit le contrat d'un trait : noms imposés, possible sur un type étranger si le trait est à soi.</div></details>
+    <details class="q"><summary>Énonce l'orphan rule et sa raison d'être.</summary><div class="a">Pour <code>impl Trait for Type</code>, le trait ou le type doit être défini dans la crate courante. Sans elle, deux crates pourraient implémenter le même trait pour le même type, et un projet qui utilise les deux ne saurait pas laquelle choisir.</div></details>
+    <details class="q"><summary>Que fait réellement <code>a == b</code> ? Et <code>a != b</code> ?</summary><div class="a"><code>PartialEq::eq(&amp;a, &amp;b)</code> et <code>PartialEq::ne(&amp;a, &amp;b)</code>. <code>ne</code> a une implémentation par défaut, <code>!self.eq(other)</code>.</div></details>
+    <details class="q"><summary>Pourquoi <code>assert_eq!</code> exige-t-il <code>Debug</code> ?</summary><div class="a">En cas d'échec, il affiche les deux valeurs comparées ; il faut savoir les représenter en texte.</div></details>
+    <details class="q"><summary>Qu'est-ce que <code>#[derive(...)]</code> ? Quelle condition pour qu'il marche ?</summary><div class="a">Une macro qui génère l'impl du trait à partir des champs. Tous les champs doivent déjà implémenter le trait.</div></details>
+    <details class="q"><summary>À quoi sert un trait bound ? Pourquoi le compilateur ne le devine-t-il pas ?</summary><div class="a">À dire ce qu'un type générique sait faire (<code>T: PartialOrd</code> pour utiliser <code>&lt;=</code>). La signature est un contrat entre appelant et appelé : il doit être explicite (meilleurs messages d'erreur, doc, compilation plus rapide, moins de cassures).</div></details>
+    <details class="q"><summary>Paramètre générique ou type associé : comment choisir ?</summary><div class="a">Générique quand on veut plusieurs impl pour un même type avec des entrées différentes (<code>From&lt;T&gt;</code>). Type associé quand le type doit être unique pour une impl donnée (<code>Deref::Target</code>, <code>Add::Output</code>).</div></details>
+    <details class="q"><summary><code>String</code>, <code>&amp;String</code>, <code>&amp;str</code>, <code>str</code> : taille et rôle de chacun ?</summary><div class="a"><code>str</code> : le texte, taille inconnue (DST). <code>String</code> : 24, texte possédé sur le tas. <code>&amp;String</code> : 8, flèche vers une String entière. <code>&amp;str</code> : 16, vue sur tout ou partie d'un texte (fat pointer).</div></details>
+    <details class="q"><summary>Pourquoi préférer <code>&amp;str</code> à <code>&amp;String</code> dans un getter ou un paramètre ?</summary><div class="a">Plus souple : peut désigner une partie d'un texte, accepte les littéraux et les String, ne révèle pas le stockage interne.</div></details>
+    <details class="q"><summary>Pourquoi <code>fn title(&amp;self) -&gt; &amp;str { &amp;self.title }</code> compile-t-il alors que <code>&amp;self.title</code> est un <code>&amp;String</code> ?</summary><div class="a">Deref coercion : <code>String</code> implémente <code>Deref&lt;Target = str&gt;</code>, donc <code>&amp;String</code> est converti automatiquement en <code>&amp;str</code>.</div></details>
+    <details class="q"><summary>Pourquoi peut-on appeler <code>trim()</code> sur une <code>String</code> alors qu'elle est définie sur <code>str</code> ?</summary><div class="a">Grâce à <code>Deref</code> : les méthodes de <code>str</code> qui prennent <code>&amp;self</code> sont accessibles sur une <code>String</code>.</div></details>
+    <details class="q"><summary>Qu'est-ce que <code>Sized</code> ? Un marker trait ? Un auto trait ?</summary><div class="a"><code>Sized</code> marque les types de taille connue à la compilation. Marker trait : aucune méthode, juste une étiquette. Auto trait : le compilateur l'implémente tout seul.</div></details>
+    <details class="q"><summary>Quel lien entre <code>From</code> et <code>Into</code> ?</summary><div class="a">Une blanket impl de std : si <code>U: From&lt;T&gt;</code>, alors <code>T: Into&lt;U&gt;</code>. On implémente <code>From</code>, on reçoit <code>.into()</code>.</div></details>
+    <details class="q"><summary>Différence entre <code>Clone</code> et <code>Copy</code> ? Pourquoi <code>String</code> ne peut pas être <code>Copy</code> ?</summary><div class="a"><code>Clone</code> : copie explicite (<code>.clone()</code>), potentiellement coûteuse. <code>Copy</code> : copie implicite, octet par octet, à la place du move. <code>String</code> gère du tas : une copie octet par octet donnerait deux propriétaires du même tas (double free).</div></details>
+    <details class="q"><summary>Pourquoi un type avec un <code>Drop</code> ne peut-il pas être <code>Copy</code> ?</summary><div class="a">Un <code>Drop</code> signale une ressource à nettoyer. Des copies implicites exécuteraient le nettoyage plusieurs fois (E0184).</div></details>
+    <details class="q"><summary>Dans <code>(ticket, ticket.clone().summary())</code>, pourquoi le clone ne sauve-t-il rien ?</summary><div class="a">Le tuple est évalué de gauche à droite : <code>ticket</code> est déjà déplacé quand on veut le cloner. Il faut cloner avant de déplacer.</div></details>
+    <details class="q"><summary>Pourquoi ne met-on pas <code>pub</code> devant <code>fn add</code> dans <code>impl Add for …</code> ?</summary><div class="a">La visibilité des méthodes d'une impl de trait est celle du trait (E0449 sinon).</div></details>
+    <details class="q"><summary><code>wrapping_add</code> ou <code>saturating_add</code> ?</summary><div class="a"><code>wrapping_add</code> revient à 0 après le max ; <code>saturating_add</code> reste bloqué au max.</div></details>
+  </div>
+</section>
+
+<footer>Fiche construite à partir de ton travail sur <code>exercises/04_traits</code> (00 à 14, non commité), de nos échanges et du cours <code>book/src/04_traits</code>. Fiche précédente : <a href="03_ticket_v1.html">03_ticket_v1.html</a> · suivante : <a href="05_ticket_v2.html">05_ticket_v2.html</a>.</footer>
+</main>
+</div>
+
+<script>
+(function(){
+  var set = function(sel, open){ document.querySelectorAll(sel).forEach(function(d){ d.open = open; }); };
+  document.getElementById('openAll').addEventListener('click', function(){ set('details.ex', true); });
+  document.getElementById('closeAll').addEventListener('click', function(){ set('details.ex', false); });
+  document.getElementById('revealAll').addEventListener('click', function(){ set('details.q', true); });
+  document.getElementById('hideAll').addEventListener('click', function(){ set('details.q', false); });
+  document.querySelectorAll('nav.toc a[href^="#ex"]').forEach(function(a){
+    a.addEventListener('click', function(){
+      var d = document.querySelector(a.getAttribute('href'));
+      if (d && d.tagName === 'DETAILS') d.open = true;
+    });
+  });
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var targets = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (!e.isIntersecting) return;
+        var i = targets.indexOf(e.target);
+        links.forEach(function(l){ l.classList.remove('active'); });
+        if (i >= 0) links[i].classList.add('active');
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    targets.forEach(function(t){ if (t) io.observe(t); });
+  }
+})();
+</script>
+</body>
+</html>

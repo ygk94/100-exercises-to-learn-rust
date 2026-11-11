@@ -10,7 +10,11 @@ fn spawner() {
 }
 
 async fn example() {
-    let non_send = Rc::new(1);
+    // Le `Rc` est créé et droppé avant le `.await` : il n'est pas
+    // gardé à travers le yield point, donc la future reste `Send`.
+    {
+        let non_send = Rc::new(1);
+        println!("{}", non_send);
+    }
     yield_now().await;
-    println!("{}", non_send);
 }

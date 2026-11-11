@@ -1,0 +1,914 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ticket v1 Rust</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --bg:#f5f6f7; --surface:#ffffff; --surface-2:#eceef1; --ink:#1b2127; --ink-2:#4a545e; --muted:#6c7680;
+  --line:#d9dde2; --accent:#b4461a; --accent-soft:#f6e3d8; --accent-ink:#8a3310;
+  --code-bg:#1d2329; --code-ink:#e4e7ea; --k:#ff9f6b; --t:#7fd1c7; --s:#c3e88d; --c:#7c8a96; --n:#f2c46d; --m:#b6a6ff;
+  --ok:#2f7d4f; --ok-soft:#e1f1e7; --warn:#9a6a00; --warn-soft:#fbefd0; --bad:#b0302c; --bad-soft:#f8e0de;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"IBM Plex Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#13171b; --surface:#1a1f24; --surface-2:#232a30; --ink:#e6e9ec; --ink-2:#b3bcc4; --muted:#8a949d;
+    --line:#2e363d; --accent:#f08a5a; --accent-soft:#3a2419; --accent-ink:#ffb48f;
+    --code-bg:#0e1215; --ok:#6fcf97; --ok-soft:#18301f; --warn:#e8bd55; --warn-soft:#33290f; --bad:#f08a86; --bad-soft:#3a1c1b;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#13171b; --surface:#1a1f24; --surface-2:#232a30; --ink:#e6e9ec; --ink-2:#b3bcc4; --muted:#8a949d;
+  --line:#2e363d; --accent:#f08a5a; --accent-soft:#3a2419; --accent-ink:#ffb48f;
+  --code-bg:#0e1215; --ok:#6fcf97; --ok-soft:#18301f; --warn:#e8bd55; --warn-soft:#33290f; --bad:#f08a86; --bad-soft:#3a1c1b;
+}
+*{box-sizing:border-box}
+main a,footer a{color:var(--accent-ink);text-underline-offset:2px}
+code,pre,.tree,.bits{font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{background:var(--bg);color:var(--ink);font:16px/1.65 var(--body);padding-inline:16px}
+.shell{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:230px minmax(0,1fr);gap:48px;padding-block:40px 80px}
+@media (max-width:900px){.shell{grid-template-columns:minmax(0,1fr);gap:24px;padding-block:24px 60px}}
+
+/* nav */
+nav.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px);align-self:start;font-size:14px}
+nav.toc .brand{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px}
+nav.toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+nav.toc a{display:block;color:var(--ink-2);text-decoration:none;padding:5px 10px;border-radius:6px;border-left:2px solid transparent}
+nav.toc a:hover{background:var(--surface-2);color:var(--ink)}
+nav.toc a.active{color:var(--accent-ink);border-left-color:var(--accent);background:var(--accent-soft);border-radius:0 6px 6px 0}
+nav.toc .sub a{padding-left:22px;font-family:var(--mono);font-size:12.5px}
+@media (max-width:900px){
+  nav.toc{position:static}
+  nav.toc ol{flex-direction:row;flex-wrap:wrap;gap:6px}
+  nav.toc .sub{display:none}
+  nav.toc a{border:1px solid var(--line);border-radius:999px;padding:4px 12px}
+  nav.toc a.active{border-radius:999px;border-color:var(--accent)}
+}
+
+main{min-width:0}
+header.hero{padding-bottom:28px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.eyebrow{font-family:var(--mono);font-size:12.5px;color:var(--accent);letter-spacing:.05em}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(34px,5vw,52px);line-height:1.05;margin:8px 0 14px;text-wrap:balance;letter-spacing:-.01em}
+.lede{color:var(--ink-2);max-width:62ch;margin:0;font-size:17px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--mono);font-size:12px;padding:3px 10px;border-radius:999px;background:var(--surface-2);color:var(--ink-2)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+
+section{padding-top:44px}
+h2{font-family:var(--display);font-weight:800;font-size:clamp(24px,3vw,30px);line-height:1.15;margin:0 0 6px;text-wrap:balance}
+h2 .num{font-family:var(--mono);font-weight:400;font-size:.55em;color:var(--accent);vertical-align:.35em;margin-right:8px}
+h3{font-family:var(--display);font-weight:600;font-size:20px;margin:28px 0 8px;text-wrap:balance}
+h4{font-size:15px;font-weight:600;margin:20px 0 6px}
+p,li{max-width:70ch}
+p{margin:10px 0}
+ul,ol{padding-left:22px;margin:8px 0}
+li{margin:4px 0}
+.intro{color:var(--ink-2)}
+strong{font-weight:600}
+code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);padding:1px 5px;border-radius:4px}
+pre{margin:14px 0;background:var(--code-bg);color:var(--code-ink);border-radius:10px;padding:16px 18px;overflow-x:auto;font:13.5px/1.6 var(--mono)}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.tk{color:var(--k)} .tt{color:var(--t)} .ts{color:var(--s)} .tc{color:var(--c);font-style:italic} .tn{color:var(--n)} .tm{color:var(--m)}
+
+.tablewrap{overflow-x:auto;margin:14px 0;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;background:var(--surface-2);font-size:13px;color:var(--ink-2)}
+tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:13px;white-space:nowrap}
+
+.say{margin:18px 0;padding:14px 18px;background:var(--accent-soft);border-radius:10px;color:var(--ink)}
+.say b{display:block;font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:4px;font-weight:600}
+.warn{margin:14px 0;padding:12px 16px;background:var(--warn-soft);border-radius:10px}
+.warn b{color:var(--warn)}
+
+/* principles */
+.principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:18px 0}
+.pr{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pr .i{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.pr h4{margin:4px 0 6px;font-size:15.5px}
+.pr p{margin:0;font-size:14px;color:var(--ink-2)}
+
+/* pipeline */
+.pipeline{display:flex;flex-direction:column;gap:0;margin:18px 0;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+.stage{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.stage:last-child{border-bottom:0}
+.stage .n{font-family:var(--mono);color:var(--muted);font-size:13px;padding-top:2px}
+.stage h4{margin:0}
+.stage p{margin:2px 0 0;font-size:14px;color:var(--ink-2)}
+.stage.hl{background:var(--accent-soft)}
+.stage.hl .n{color:var(--accent-ink)}
+.err{font-family:var(--mono);font-size:12px;color:var(--bad);white-space:nowrap}
+
+/* exercises */
+details.ex{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin:12px 0}
+details.ex[open]{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+details.ex>summary{cursor:pointer;list-style:none;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 18px}
+details.ex>summary::-webkit-details-marker{display:none}
+details.ex>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:12px}
+.exid{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:600}
+.extitle{font-weight:600}
+.extitle small{display:block;font-weight:400;color:var(--muted);font-size:13.5px}
+.chev{color:var(--muted);transition:transform .2s}
+details[open] .chev{transform:rotate(90deg)}
+.exbody{padding:0 18px 18px;border-top:1px solid var(--line)}
+.flag{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:2px}
+.flag.w{background:var(--warn-soft);color:var(--warn)}
+.tools{display:flex;gap:8px;margin:14px 0 4px;flex-wrap:wrap}
+button{font:500 13px var(--body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{background:var(--surface-2)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ring */
+.ring{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:24px;align-items:center;margin:16px 0}
+@media (max-width:640px){.ring{grid-template-columns:minmax(0,1fr)}}
+.ring svg{width:100%;max-width:260px;height:auto}
+.bits{font-family:var(--mono);font-size:14px;display:flex;gap:3px;flex-wrap:wrap}
+.bits span{width:24px;height:28px;display:grid;place-items:center;border-radius:4px;background:var(--surface-2)}
+.bits span.sign{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+
+/* quiz */
+.quiz{counter-reset:q;display:flex;flex-direction:column;gap:8px;margin-top:14px}
+details.q{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+details.q>summary{cursor:pointer;list-style:none;padding:12px 16px;display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:10px;align-items:baseline}
+details.q>summary::-webkit-details-marker{display:none}
+details.q>summary::before{counter-increment:q;content:counter(q);font-family:var(--mono);font-size:13px;color:var(--accent)}
+details.q>summary::after{content:"Réponse";font-size:12px;color:var(--muted);font-family:var(--mono)}
+details.q[open]>summary::after{content:"Masquer"}
+details.q>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
+details.q .a{padding:0 16px 14px 58px;color:var(--ink-2)}
+@media (max-width:520px){details.q .a{padding-left:16px}}
+footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+</style>
+<style>
+.flag.b{background:var(--bad-soft);color:var(--bad)}
+.flag.o{background:var(--ok-soft);color:var(--ok)}
+.progress{display:grid;grid-template-columns:repeat(13,minmax(0,1fr));gap:4px;margin-top:18px;max-width:560px}
+.progress span{height:8px;border-radius:2px;background:var(--surface-2)}
+.progress span.done{background:var(--accent)}
+.progress-legend{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:6px}
+.receivers{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:18px 0}
+.rcv{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.rcv code.big{font-size:17px;background:none;padding:0;color:var(--accent-ink);font-weight:600}
+.rcv .what{font-size:13px;color:var(--muted);margin:2px 0 8px;font-family:var(--mono)}
+.rcv p{margin:6px 0 0;font-size:14px;color:var(--ink-2)}
+.rcv .use{font-size:13.5px;margin-top:8px}
+.lock{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:16px 0}
+.lock>div{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--surface)}
+.lock h4{margin:0 0 6px}
+.lock .tag{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tree{font:13.5px/1.7 var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;overflow-x:auto;white-space:pre;color:var(--ink)}
+.tree .p{color:var(--bad)} .tree .u{color:var(--ok)} .tree .m{color:var(--muted)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:700px){.two{grid-template-columns:minmax(0,1fr)}}
+.two pre{margin:0}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin:10px 0 4px}
+.todo{border:1px dashed var(--line);border-radius:12px;padding:14px 18px;color:var(--ink-2);margin:12px 0}
+.todo ul{margin:6px 0 0}
+</style>
+
+</head>
+<body>
+<div class="shell">
+<nav class="toc" aria-label="Sommaire">
+  <div class="brand">Chapitre 03</div>
+  <ol>
+    <li><a href="#avancement">Où tu en es</a></li>
+    <li><a href="#principes">Premiers principes</a></li>
+    <li><a href="#ownership">Ownership &amp; move</a></li>
+    <li><a href="#borrow">Borrow checker</a></li>
+    <li><a href="#modules">Modules &amp; visibilité</a></li>
+    <li><a href="#syntaxe">Syntaxe</a></li>
+    <li><a href="#exercices">Exercices</a></li>
+    <li class="sub"><a href="#ex00">00 intro</a></li>
+    <li class="sub"><a href="#ex01">01 struct</a></li>
+    <li class="sub"><a href="#ex02">02 validation</a></li>
+    <li class="sub"><a href="#ex03">03 modules</a></li>
+    <li class="sub"><a href="#ex04">04 visibility</a></li>
+    <li class="sub"><a href="#ex05">05 encapsulation</a></li>
+    <li class="sub"><a href="#ex06">06 ownership</a></li>
+    <li class="sub"><a href="#ex07">07 setters</a></li>
+    <li class="sub"><a href="#ex08">08 stack</a></li>
+    <li class="sub"><a href="#ex09">09 heap</a></li>
+    <li class="sub"><a href="#ex10">10 references</a></li>
+    <li class="sub"><a href="#ex11">11 destructor</a></li>
+    <li class="sub"><a href="#ex12">12 outro</a></li>
+    <li><a href="#memoire">La mémoire</a></li>
+    <li><a href="#oral">Questions d'oral</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="hero" id="avancement">
+  <div class="eyebrow">100 exercises to learn Rust · 03_ticket_v1</div>
+  <h1>Fiche synthèse&nbsp;: Ticket v1</h1>
+  <p class="lede">Le chapitre où Rust devient Rust : on crée ses propres types, on protège leurs règles, on découvre l'<strong>ownership</strong> et le <strong>borrow checker</strong>, puis on regarde ce qui se passe <strong>en mémoire</strong> (pile, tas, références, destructeur). Cette fiche couvre tout le chapitre, exercices 00 à 12.</p>
+  <div class="meta">
+    <span class="chip">13 exercices sur 13</span>
+    <span class="chip ok">tous les tests passent</span>
+    <span class="chip">travail non commité</span>
+  </div>
+  <div class="progress" aria-label="13 exercices faits sur 13">
+    <span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span>
+  </div>
+  <div class="progress-legend">chapitre terminé · suite : fiches/04_traits.html</div>
+</header>
+
+<!-- ============ PRINCIPES ============ -->
+<section id="principes">
+  <h2><span class="num">§0</span>Les premiers principes du chapitre</h2>
+  <p class="intro">Le chapitre 02 disait « rien n'est implicite ». Le chapitre 03 applique cette idée à la mémoire et à l'organisation du code.</p>
+  <div class="principles">
+    <div class="pr"><span class="i">principe 1</span><h4>Un <code>struct</code> crée un nouveau type</h4><p>On combine des types existants en champs. Le compilateur traite <code>Ticket</code> comme un type à part entière.</p></div>
+    <div class="pr"><span class="i">principe 2</span><h4>Tout est privé par défaut</h4><p>On ouvre explicitement avec <code>pub</code>. Ce qu'on n'ouvre pas peut changer sans rien casser ailleurs.</p></div>
+    <div class="pr"><span class="i">principe 3</span><h4>Les invariants se protègent par l'encapsulation</h4><p>Champs privés + constructeur public qui valide = impossible de fabriquer un <code>Ticket</code> invalide.</p></div>
+    <div class="pr"><span class="i">principe 4</span><h4>Chaque valeur a un seul propriétaire</h4><p>La propriété se <strong>déplace</strong> (move). Quand le propriétaire disparaît, la valeur est libérée.</p></div>
+    <div class="pr"><span class="i">principe 5</span><h4>La signature dit comment on utilise un argument</h4><p><code>self</code> consomme, <code>&amp;self</code> lit, <code>&amp;mut self</code> modifie. C'est écrit dans le type, et vérifié.</p></div>
+  </div>
+  <div class="say"><b>À savoir dire</b>« Rust garantit la sécurité mémoire sans garbage collector : chaque valeur a un propriétaire connu à la compilation, et le borrow checker vérifie que les données ne sont jamais modifiées pendant qu'on les lit, jamais lues pendant qu'on les modifie, et jamais utilisées après avoir été détruites. »</div>
+</section>
+
+<!-- ============ OWNERSHIP ============ -->
+<section id="ownership">
+  <h2><span class="num">§1</span>Ownership et move</h2>
+
+  <h3>Pourquoi ça existe</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th></th><th>Pas de GC à l'exécution</th><th>Pas de gestion mémoire manuelle</th><th>Pas de bugs mémoire</th></tr></thead>
+    <tbody>
+      <tr><td>Python, Java, JavaScript</td><td>non</td><td>oui</td><td>oui</td></tr>
+      <tr><td>C, C++</td><td>oui</td><td>non</td><td>non</td></tr>
+      <tr><td><strong>Rust</strong></td><td><strong>oui</strong></td><td><strong>oui</strong></td><td><strong>oui</strong></td></tr>
+    </tbody>
+  </table></div>
+  <p>Les « bugs mémoire » évités : <strong>dangling pointer</strong> (pointeur vers une mémoire déjà libérée), <strong>double free</strong> (libérer deux fois la même mémoire), <strong>data race</strong> (lecture et écriture simultanées).</p>
+
+  <h3>Les règles</h3>
+  <ol>
+    <li>Chaque valeur a <strong>un propriétaire</strong>, déterminé à la compilation.</li>
+    <li>Il n'y a <strong>qu'un seul</strong> propriétaire à la fois.</li>
+    <li>Quand le propriétaire sort de sa portée, la valeur est <strong>détruite</strong> (drop). Détails à l'exercice 11 et en <a href="#memoire">§6</a>.</li>
+  </ol>
+
+  <h3>Move : la propriété change de main</h3>
+<pre><code><span class="tk">let</span> a = <span class="ts">"hello"</span>.to_string();  <span class="tc">// a est propriétaire du String</span>
+<span class="tk">let</span> b = a;                     <span class="tc">// move : b devient propriétaire</span>
+<span class="tm">println!</span>(<span class="ts">"{a}"</span>);               <span class="tc">// ❌ E0382 borrow of moved value: `a`</span></code></pre>
+  <ul>
+    <li><code>String</code> et <code>Ticket</code> ne sont <strong>pas <code>Copy</code></strong> : les affecter ou les passer à une fonction qui prend la valeur les <strong>déplace</strong>.</li>
+    <li>Les entiers et <code>bool</code> sont <code>Copy</code> : ils sont copiés, l'original reste utilisable. C'est pour ça que tu n'avais jamais eu ce problème au chapitre 02.</li>
+    <li>Un move n'est pas une copie coûteuse : Rust transfère juste le « titre de propriété ». L'ancienne variable est simplement interdite d'usage.</li>
+  </ul>
+
+  <h3>Ce qu'un getter qui prend <code>self</code> provoque (exercice 06)</h3>
+<pre><code><span class="tk">pub fn</span> status(<span class="tk">self</span>) -&gt; <span class="tt">String</span> { <span class="tk">self</span>.status }
+
+<span class="tk">if</span> ticket.status() == <span class="ts">"To-Do"</span> {       <span class="tc">// ticket est DÉPLACÉ dans status()</span>
+    <span class="tm">println!</span>(<span class="ts">"{}"</span>, ticket.title());     <span class="tc">// ❌ E0382 use of moved value: `ticket`</span>
+}</code></pre>
+  <p>Ce qui se passe pendant <code>ticket.status()</code> : la méthode prend possession du ticket entier, renvoie le champ <code>status</code> à l'appelant, et <strong>jette le reste</strong> (<code>title</code>, <code>description</code>). Le ticket n'existe plus.</p>
+
+  <h3><code>self</code>, <code>&amp;self</code>, <code>&amp;mut self</code></h3>
+  <div class="receivers">
+    <div class="rcv"><code class="big">self</code><div class="what">prend la propriété</div><p>La méthode <strong>consomme</strong> l'instance. L'appelant ne peut plus l'utiliser, sauf si la méthode la lui rend.</p><p class="use">Pour : transformer ou détruire, setters chaînables <code>fn set_title(mut self, …) -&gt; Self</code>.</p></div>
+    <div class="rcv"><code class="big">&amp;self</code><div class="what">emprunt partagé</div><p>La méthode <strong>lit</strong> sans prendre. L'appelant garde son ticket. Plusieurs lectures en même temps sont possibles.</p><p class="use">Pour : getters, calculs, affichage.</p></div>
+    <div class="rcv"><code class="big">&amp;mut self</code><div class="what">emprunt exclusif</div><p>La méthode <strong>modifie</strong> sans prendre. Exige une variable <code>let mut</code>, et personne d'autre ne doit l'utiliser pendant ce temps.</p><p class="use">Pour : setters, ajouts, mises à jour.</p></div>
+  </div>
+  <div class="say"><b>Règle de choix</b>Demande le <strong>minimum</strong> dont la méthode a besoin : <code>&amp;self</code> si elle lit, <code>&amp;mut self</code> si elle modifie, <code>self</code> seulement si elle doit consommer. Tu l'avais d'ailleurs fait d'instinct à l'exercice 01 avec <code>is_available(&amp;self)</code>.</div>
+</section>
+
+<!-- ============ BORROW ============ -->
+<section id="borrow">
+  <h2><span class="num">§2</span>Le borrow checker</h2>
+  <p class="intro">Le borrow checker est la partie du compilateur qui vérifie les emprunts. Emprunter une valeur, c'est obtenir une <strong>référence</strong> vers elle sans en prendre la propriété.</p>
+
+  <h3>Ses trois garanties</h3>
+  <ul>
+    <li>Une donnée n'est jamais <strong>modifiée pendant qu'on la lit</strong>.</li>
+    <li>Une donnée n'est jamais <strong>lue pendant qu'on la modifie</strong>.</li>
+    <li>Une donnée n'est jamais <strong>utilisée après sa destruction</strong>.</li>
+  </ul>
+
+  <h3>Les règles des références : un verrou lecture ou écriture</h3>
+  <div class="lock">
+    <div><span class="tag">verrou lecture</span><h4><code>&amp;T</code> — référence partagée</h4><p>Autant que tu veux en même temps, tant qu'il n'y a <strong>aucun</strong> <code>&amp;mut</code>. Le propriétaire ne peut pas modifier la valeur pendant ce temps.</p></div>
+    <div><span class="tag">verrou écriture</span><h4><code>&amp;mut T</code> — référence exclusive</h4><p><strong>Une seule</strong> à la fois, et aucune <code>&amp;T</code> en parallèle. La variable d'origine doit être <code>mut</code>.</p></div>
+  </div>
+  <p>En une phrase : <strong>plusieurs lecteurs OU un seul écrivain</strong> (« aliasing XOR mutation »).</p>
+
+  <h3>Durée d'un emprunt</h3>
+  <p>Un emprunt dure <strong>jusqu'à la dernière utilisation de la référence</strong>, pas jusqu'à la fin du bloc (c'est ce qu'on appelle les <em>non-lexical lifetimes</em>).</p>
+<pre><code><span class="tk">let mut</span> v = <span class="tt">String</span>::from(<span class="ts">"x"</span>);
+<span class="tk">let</span> r = &amp;v;              <span class="tc">// emprunt en lecture</span>
+<span class="tm">println!</span>(<span class="ts">"{r}"</span>);          <span class="tc">// dernière utilisation de r → l'emprunt s'arrête ici</span>
+v.push(<span class="ts">'!'</span>);              <span class="tc">// ✅ OK, plus personne ne lit
+
+</span><span class="tk">let</span> r = &amp;v;
+v.push(<span class="ts">'!'</span>);              <span class="tc">// ❌ E0502 : on modifie pendant que r lit encore…</span>
+<span class="tm">println!</span>(<span class="ts">"{r}"</span>);          <span class="tc">// …car r est utilisé ici</span></code></pre>
+
+  <h3>Le même symbole, deux sens</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Écrit devant…</th><th>Exemple</th><th>Signification</th></tr></thead>
+    <tbody>
+      <tr><td>une <strong>valeur</strong></td><td><code>&amp;config.version</code></td><td><strong>action</strong> : j'emprunte cette valeur</td></tr>
+      <tr><td>un <strong>type</strong></td><td><code>let b: &amp;u32</code></td><td><strong>type</strong> : « référence vers un <code>u32</code> »</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Les erreurs à reconnaître</h3>
+  <p>Toutes ces erreurs ont été reproduites avec le compilateur pour cette fiche.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Code</th><th>Message</th><th>Cause</th></tr></thead>
+    <tbody>
+      <tr><td class="err">E0382</td><td>use / borrow of moved value</td><td>Utiliser une variable après l'avoir déplacée (getter en <code>self</code>, <code>let b = a;</code>).</td></tr>
+      <tr><td class="err">E0499</td><td>cannot borrow as mutable more than once at a time</td><td>Deux <code>&amp;mut</code> actifs en même temps.</td></tr>
+      <tr><td class="err">E0502</td><td>cannot borrow as mutable because it is also borrowed as immutable</td><td>Un <code>&amp;</code> et un <code>&amp;mut</code> actifs en même temps.</td></tr>
+      <tr><td class="err">E0596</td><td>cannot borrow as mutable, as it is not declared as mutable</td><td>Appeler une méthode <code>&amp;mut self</code> sur un <code>let</code> sans <code>mut</code>, ou à travers un <code>&amp;</code>.</td></tr>
+      <tr><td class="err">E0515</td><td>cannot return reference to local variable</td><td>Renvoyer <code>&amp;s</code> alors que <code>s</code> est détruit à la fin de la fonction (dangling pointer évité).</td></tr>
+      <tr><td class="err">E0597</td><td>does not live long enough</td><td>La référence survit à la valeur qu'elle pointe.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Pourquoi <code>fn title(&amp;self) -&gt; &amp;str</code> est sûr</h3>
+  <p>La référence renvoyée pointe <strong>à l'intérieur</strong> du ticket. Le compilateur relie automatiquement sa durée de vie à celle de <code>&amp;self</code> (règle d'<em>élision des lifetimes</em>) : tant que tu gardes le <code>&amp;str</code>, le ticket reste emprunté et ne peut être ni modifié, ni déplacé, ni détruit.</p>
+</section>
+
+<!-- ============ MODULES ============ -->
+<section id="modules">
+  <h2><span class="num">§3</span>Modules et visibilité</h2>
+
+  <h3>L'arbre des modules</h3>
+  <p>Un <strong>module</strong> regroupe du code sous un nom. Les modules forment un arbre dont la racine est le <strong>crate</strong> (<code>src/lib.rs</code> pour une bibliothèque). Exemple avec l'exercice 04 :</p>
+<div class="tree">crate                    <span class="m">(src/lib.rs, la racine)</span>
+├── ticket               <span class="m">mod ticket { … }        privé</span>
+│   ├── Ticket           <span class="u">pub struct</span>
+│   │   ├── title        <span class="p">champ privé</span>
+│   │   ├── description  <span class="p">champ privé</span>
+│   │   └── status       <span class="p">champ privé</span>
+│   └── Ticket::new      <span class="u">pub fn</span>
+└── tests                <span class="m">mod tests { … }         enfant de crate, frère de ticket</span></div>
+
+  <h3>La règle de visibilité</h3>
+  <p>Un élément <strong>privé</strong> est accessible uniquement :</p>
+  <ol>
+    <li>dans le module où il est défini ;</li>
+    <li>dans les <strong>sous-modules</strong> de ce module.</li>
+  </ol>
+  <p>Donc un enfant voit le privé de ses ancêtres, mais un parent ou un frère ne voit pas le privé d'un module. Dans l'arbre ci-dessus, <code>tests</code> voit <code>ticket</code> (privé, mais défini dans <code>crate</code>, son parent), mais ne voit pas l'<em>intérieur</em> de <code>ticket</code> sans <code>pub</code>.</p>
+
+  <div class="tablewrap"><table>
+    <thead><tr><th>Modificateur</th><th>Visible depuis</th></tr></thead>
+    <tbody>
+      <tr><td><em>(rien)</em></td><td>le module et ses sous-modules</td></tr>
+      <tr><td><code>pub</code></td><td>partout, y compris d'autres crates</td></tr>
+      <tr><td><code>pub(crate)</code></td><td>tout le crate courant, pas au-delà</td></tr>
+      <tr><td><code>pub(super)</code></td><td>le module parent</td></tr>
+      <tr><td><code>pub(in chemin::module)</code></td><td>le module indiqué</td></tr>
+    </tbody>
+  </table></div>
+  <div class="warn"><b>Piège :</b> <code>pub struct</code> ne rend <strong>pas</strong> les champs publics. Chaque champ a sa propre visibilité. Une struct publique avec des champs privés ne peut ni être lue champ par champ (<span class="err">E0616</span>), ni être construite avec <code>Ticket { … }</code> (<span class="err">E0451</span>) depuis l'extérieur.</div>
+
+  <h3>Chemins et <code>use</code></h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Chemin</th><th>Part de</th><th>Exemple</th></tr></thead>
+    <tbody>
+      <tr><td><code>crate::</code></td><td>la racine du crate</td><td><code>crate::ticket::Ticket</code></td></tr>
+      <tr><td><code>super::</code></td><td>le module parent</td><td><code>super::Ticket</code></td></tr>
+      <tr><td><code>self::</code> ou rien</td><td>le module courant</td><td><code>ticket::Ticket</code></td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><code>use chemin::Élément;</code> met un nom à portée pour ne pas réécrire le chemin complet.</li>
+    <li><code>use super::*;</code> (<em>star import</em>) importe tout. Pratique dans les tests, déconseillé ailleurs : on ne sait plus d'où viennent les noms.</li>
+    <li><code>mod dog;</code> (avec un <code>;</code>) déclare un module dont le contenu est dans <code>src/dog.rs</code> ou <code>src/dog/mod.rs</code>.</li>
+  </ul>
+
+  <h3>Encapsulation : à quoi sert tout ça</h3>
+  <p>Un <strong>invariant</strong> est une règle toujours vraie sur un objet : « le titre n'est jamais vide », « le statut vaut To-Do, In Progress ou Done ». Si les champs sont publics, n'importe qui peut les casser. La recette :</p>
+  <ol>
+    <li>champs <strong>privés</strong> ;</li>
+    <li><strong>constructeur</strong> public qui valide (<code>Ticket::new</code>) ;</li>
+    <li><strong>getters</strong> publics pour lire (<code>&amp;self</code>) ;</li>
+    <li><strong>setters</strong> publics qui revalident avant de modifier (<code>&amp;mut self</code>).</li>
+  </ol>
+  <div class="say"><b>À savoir dire</b>« Le système de visibilité rend le constructeur validant <strong>incontournable</strong> : comme les champs sont privés, le compilateur interdit de créer ou modifier un Ticket sans passer par les méthodes qui vérifient les règles. L'invariant est garanti par le compilateur, pas par la discipline des développeurs. »</div>
+</section>
+
+<!-- ============ SYNTAXE ============ -->
+<section id="syntaxe">
+  <h2><span class="num">§4</span>Aide-mémoire de syntaxe</h2>
+<pre><code><span class="tc">// Définir un type</span>
+<span class="tk">pub struct</span> <span class="tt">Ticket</span> {
+    title: <span class="tt">String</span>,              <span class="tc">// champ privé</span>
+    <span class="tk">pub</span> status: <span class="tt">String</span>,         <span class="tc">// champ public</span>
+}
+
+<span class="tc">// Instancier</span>
+<span class="tk">let</span> t = <span class="tt">Ticket</span> { title: <span class="ts">"A"</span>.into(), status: <span class="ts">"To-Do"</span>.into() };
+<span class="tt">Ticket</span> { title, status }             <span class="tc">// raccourci si les variables ont le même nom que les champs</span>
+
+<span class="tc">// Accéder à un champ</span>
+t.title
+
+<span class="tc">// Méthodes</span>
+<span class="tk">impl</span> <span class="tt">Ticket</span> {
+    <span class="tk">pub fn</span> new(title: <span class="tt">String</span>) -&gt; <span class="tt">Self</span> { … }   <span class="tc">// méthode statique (pas de self)</span>
+    <span class="tk">pub fn</span> title(&amp;<span class="tk">self</span>) -&gt; &amp;<span class="tt">str</span> { &amp;<span class="tk">self</span>.title }
+    <span class="tk">pub fn</span> set_title(&amp;<span class="tk">mut self</span>, t: <span class="tt">String</span>) { <span class="tk">self</span>.title = t; }
+}
+
+<span class="tt">Ticket</span>::new(<span class="ts">"A"</span>.into())     <span class="tc">// appel statique : Type::méthode(...)</span>
+t.title()                   <span class="tc">// appel de méthode : instance.méthode(...)</span>
+<span class="tt">Ticket</span>::title(&amp;t)          <span class="tc">// équivalent, en écriture « fonction »</span>
+
+<span class="tc">// Modules</span>
+<span class="tk">mod</span> helpers { <span class="tk">use super</span>::<span class="tt">Ticket</span>; … }
+<span class="tk">pub mod</span> ticket { … }
+
+<span class="tc">// Emprunts</span>
+<span class="tk">let</span> r: &amp;<span class="tt">String</span> = &amp;s;       <span class="tc">// lecture</span>
+<span class="tk">let</span> m: &amp;<span class="tk">mut</span> <span class="tt">String</span> = &amp;<span class="tk">mut</span> s; <span class="tc">// écriture (s doit être mut)</span>
+
+<span class="tc">// Shadowing : redéclarer le même nom</span>
+<span class="tk">let</span> ticket = ticket.set_title(<span class="ts">"B"</span>.into());   <span class="tc">// avec un setter en self</span></code></pre>
+
+  <h3>Petits outils rencontrés</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Élément</th><th>Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>Self</code></td><td>Dans un <code>impl</code>, alias du type en cours (<code>Ticket</code>).</td></tr>
+      <tr><td><code>self</code></td><td>L'instance sur laquelle la méthode est appelée.</td></tr>
+      <tr><td><code>"texte".into()</code></td><td>Convertit un <code>&amp;str</code> en <code>String</code> ; le type cible est déduit du contexte.</td></tr>
+      <tr><td><code>String</code> / <code>&amp;str</code></td><td><code>String</code> possède son texte (modifiable, sur le tas). <code>&amp;str</code> est une vue empruntée sur du texte.</td></tr>
+      <tr><td><code>&amp;String</code> → <code>&amp;str</code></td><td>Conversion automatique (<em>deref coercion</em>) : c'est pour ça que <code>-&gt; &amp;str</code> accepte <code>&amp;self.title</code>. Une des rares conversions implicites de Rust.</td></tr>
+      <tr><td><code>s.is_empty()</code></td><td>Vrai si la chaîne est vide. Plus lisible que <code>s.len() == 0</code>.</td></tr>
+      <tr><td><code>s.len()</code></td><td>Longueur en <strong>octets</strong>, pas en caractères : <code>"é".len() == 2</code> (UTF-8).</td></tr>
+      <tr><td><code>string != "To-Do"</code></td><td>Comparer un <code>String</code> à un <code>&amp;str</code> fonctionne directement.</td></tr>
+      <tr><td><code>assert!(cond)</code></td><td>Panique si la condition est fausse.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ EXERCICES ============ -->
+<section id="exercices">
+  <h2><span class="num">§5</span>Les exercices un par un</h2>
+  <p class="intro">Clique sur un exercice pour voir ton code, le principe et les pièges.</p>
+  <div class="tools">
+    <button type="button" id="openAll">Tout ouvrir</button>
+    <button type="button" id="closeAll">Tout fermer</button>
+  </div>
+
+  <details class="ex" id="ex00">
+    <summary><span class="exid">00</span><span class="extitle">intro<small>Présentation du chapitre</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">fn</span> intro() -&gt; &amp;<span class="tk">'static</span> <span class="tt">str</span> {
+    <span class="ts">"I'm ready to start modelling a software ticket!"</span>
+}</code></pre>
+      <p>Le fil rouge du chapitre : modéliser un ticket façon JIRA (titre, description, statut). La première version ne sera ni parfaite ni idiomatique ; elle sert à introduire les structs, l'ownership, la mémoire, les modules et les chaînes de caractères.</p>
+    </div>
+  </details>
+
+  <details class="ex" id="ex01">
+    <summary><span class="exid">01</span><span class="extitle">struct <span class="flag w">code en trop</span><small>Définir un type et une méthode</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">struct</span> <span class="tt">Ticket</span> {
+    order: <span class="tt">Order</span>,
+}
+
+<span class="tk">struct</span> <span class="tt">Order</span> {
+    price: <span class="tt">u32</span>,
+    quantity: <span class="tt">u32</span>
+}
+
+<span class="tk">impl</span> <span class="tt">Order</span> {
+    <span class="tk">fn</span> is_available(&amp;<span class="tk">self</span>) -&gt; <span class="tt">bool</span> {
+        <span class="tk">self</span>.quantity &gt; <span class="tn">0</span>
+    }
+}</code></pre>
+      <ul>
+        <li><strong>Demandé :</strong> une struct <code>Order</code> avec <code>price</code> et <code>quantity</code>, et une méthode <code>is_available</code>.</li>
+        <li><strong>Principe :</strong> une <code>struct</code> définit un <strong>nouveau type</strong> en combinant d'autres types (les champs). Les méthodes s'écrivent dans un bloc <code>impl</code>.</li>
+        <li><strong>Bien vu :</strong> <code>&amp;self</code> plutôt que <code>self</code>. Le cours écrit <code>self</code> à ce stade, mais ta version permet d'appeler la méthode plusieurs fois sur la même commande.</li>
+        <li><code>self.quantity &gt; 0</code> est déjà un <code>bool</code> : pas besoin de <code>if … { true } else { false }</code>.</li>
+        <li><strong>Tests :</strong> <code>assert!(order.is_available())</code> et <code>assert!(!order.is_available())</code> ; <code>use super::*;</code> importe tout le module parent.</li>
+      </ul>
+      <div class="warn"><b>En trop :</b> la struct <code>Ticket { order: Order }</code> n'était pas demandée et n'est utilisée nulle part. Elle compile, mais c'est du code mort : à supprimer.</div>
+    </div>
+  </details>
+
+  <details class="ex" id="ex02">
+    <summary><span class="exid">02</span><span class="extitle">validation<small>Constructeur qui vérifie les règles</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">fn</span> new(title: <span class="tt">String</span>, description: <span class="tt">String</span>, status: <span class="tt">String</span>) -&gt; <span class="tt">Self</span> {
+    <span class="tk">if</span> status != <span class="ts">"To-Do"</span> &amp;&amp; status != <span class="ts">"In Progress"</span> &amp;&amp; status != <span class="ts">"Done"</span> {
+        <span class="tm">panic!</span>(<span class="ts">"Only `To-Do`, `In Progress`, and `Done` statuses are allowed"</span>)
+    } <span class="tk">else if</span> title.len() == <span class="tn">0</span> {
+        <span class="tm">panic!</span>(<span class="ts">"Title cannot be empty"</span>)
+    } <span class="tk">else if</span> description.len() == <span class="tn">0</span> {
+        <span class="tm">panic!</span>(<span class="ts">"Description cannot be empty"</span>)
+    } <span class="tk">else if</span> title.len() &gt; <span class="tn">50</span> {
+        <span class="tm">panic!</span>(<span class="ts">"Title cannot be longer than 50 bytes"</span>)
+    } <span class="tk">else if</span> description.len() &gt; <span class="tn">500</span> {
+        <span class="tm">panic!</span>(<span class="ts">"Description cannot be longer than 500 bytes"</span>)
+    }
+    <span class="tt">Self</span> { title, description, status }
+}</code></pre>
+      <ul>
+        <li><strong>Principe :</strong> des champs de type « brut » (<code>String</code>) acceptent n'importe quoi. Le constructeur <code>new</code> est l'endroit où on <strong>vérifie les règles</strong> avant de créer l'objet.</li>
+        <li><code>new</code> n'a pas de <code>self</code> : c'est une <strong>méthode statique</strong>, appelée par <code>Ticket::new(...)</code>. <code>new</code> n'est pas un mot-clé, juste une convention.</li>
+        <li><code>Self { title, description, status }</code> : raccourci quand les variables portent le nom des champs. Les <code>String</code> sont <strong>déplacées</strong> dans le ticket.</li>
+        <li>La chaîne de <code>if / else if</code> sans <code>else</code> final compile parce que chaque branche vaut <code>!</code> (panic), compatible avec <code>()</code>.</li>
+        <li><strong>Tests :</strong> <code>common::valid_title()</code> etc. viennent du crate d'aide <code>helpers/common</code> ; <code>"Funny".into()</code> convertit <code>&amp;str</code> en <code>String</code>.</li>
+      </ul>
+      <div class="warn"><b>À améliorer :</b> <code>title.len() == 0</code> → <code>title.is_empty()</code>. Et retiens que <code>len()</code> compte des <strong>octets</strong> : un titre de 30 caractères accentués peut dépasser 50 octets. C'est pour ça que les messages disent « bytes ».</div>
+    </div>
+  </details>
+
+  <details class="ex" id="ex03">
+    <summary><span class="exid">03</span><span class="extitle">modules<small>Chemins et <code>use</code></small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">mod</span> helpers {
+    <span class="tk">use super</span>::<span class="tt">Ticket</span>;
+
+    <span class="tk">fn</span> create_todo_ticket(title: <span class="tt">String</span>, description: <span class="tt">String</span>) -&gt; <span class="tt">Ticket</span> {
+        <span class="tt">Ticket</span>::new(title, description, <span class="ts">"To-Do"</span>.into())
+    }
+}
+
+<span class="tk">struct</span> <span class="tt">Ticket</span> { … }   <span class="tc">// défini à la racine du crate</span></code></pre>
+      <ul>
+        <li><strong>Problème :</strong> <code>helpers</code> est un autre module ; le nom <code>Ticket</code> n'y existe pas tel quel.</li>
+        <li><strong>Fait :</strong> <code>use super::Ticket;</code>, c'est-à-dire « prends <code>Ticket</code> dans le module parent ».</li>
+        <li><strong>Alternatives équivalentes :</strong> <code>use crate::Ticket;</code>, ou écrire directement <code>super::Ticket</code> dans la signature.</li>
+        <li><strong>Pourquoi pas besoin de <code>pub</code> :</strong> <code>Ticket</code> et <code>Ticket::new</code> sont privés, mais <code>helpers</code> est un <strong>enfant</strong> de la racine où ils sont définis, donc il les voit.</li>
+        <li>Aucun test ici (0 test) : l'exercice est validé si ça compile.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex04">
+    <summary><span class="exid">04</span><span class="extitle">visibility<small><code>pub</code> et champs privés</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">mod</span> ticket {
+    <span class="tk">pub struct</span> <span class="tt">Ticket</span> {        <span class="tc">// ajouté : pub</span>
+        title: <span class="tt">String</span>,           <span class="tc">// restent privés</span>
+        description: <span class="tt">String</span>,
+        status: <span class="tt">String</span>,
+    }
+    <span class="tk">impl</span> <span class="tt">Ticket</span> {
+        <span class="tk">pub fn</span> new(…) -&gt; <span class="tt">Ticket</span> { … }   <span class="tc">// ajouté : pub</span>
+    }
+}
+
+<span class="tk">mod</span> tests {
+    <span class="tk">use super</span>::ticket::<span class="tt">Ticket</span>;
+    <span class="tc">//assert_eq!(ticket.description, "A description");   → E0616</span>
+    <span class="tc">//let ticket = Ticket { title: …, description: …, status: … };   → E0451</span>
+}</code></pre>
+      <ul>
+        <li><strong>Pourquoi <code>pub</code> est nécessaire ici :</strong> <code>tests</code> n'est <strong>pas</strong> un enfant de <code>ticket</code>, c'est son <strong>frère</strong>. Il ne voit donc pas le privé à l'intérieur de <code>ticket</code>.</li>
+        <li>Le module <code>ticket</code> lui-même peut rester privé : il est défini à la racine, dont <code>tests</code> est un enfant.</li>
+        <li><strong>Les deux lignes commentées</strong> prouvent l'encapsulation : lire un champ privé donne <span class="err">E0616</span>, construire avec <code>Ticket { … }</code> donne <span class="err">E0451</span>. <strong><code>Ticket::new</code> est désormais le seul moyen</strong> d'obtenir un ticket.</li>
+        <li>Le compilateur fait passer ces erreurs une par une : il fallait commenter la première pour voir la seconde.</li>
+        <li>Les avertissements « never used » viennent de ce que <code>should_not_be_possible</code> et <code>encapsulation_cannot_be_violated</code> n'ont pas <code>#[test]</code> : l'exercice ne teste que la compilation.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex05">
+    <summary><span class="exid">05</span><span class="extitle">encapsulation<small>Getters</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">pub fn</span> title(&amp;<span class="tk">self</span>) -&gt; &amp;<span class="tt">str</span> {
+    &amp;<span class="tk">self</span>.title
+}
+<span class="tk">pub fn</span> description(&amp;<span class="tk">self</span>) -&gt; &amp;<span class="tt">str</span> {
+    &amp;<span class="tk">self</span>.description
+}
+<span class="tk">pub fn</span> status(&amp;<span class="tk">self</span>) -&gt; &amp;<span class="tt">str</span> {
+    &amp;<span class="tk">self</span>.status
+}</code></pre>
+      <ul>
+        <li><strong>Principe :</strong> les champs étant privés, il faut des <strong>getters</strong> (méthodes d'accès) publics pour les lire. Rust ne les génère pas : ce sont des méthodes normales.</li>
+        <li><strong>Tu as anticipé l'exercice 06</strong> : <code>&amp;self</code> et <code>-&gt; &amp;str</code>, là où le cours s'attendait à <code>self</code> et <code>-&gt; String</code>.</li>
+        <li><code>&amp;self.title</code> est un <code>&amp;String</code> ; il est converti automatiquement en <code>&amp;str</code> (<em>deref coercion</em>).</li>
+        <li><strong><code>&amp;str</code> plutôt que <code>&amp;String</code></strong> en retour : c'est plus général et ça ne révèle pas le type interne. Tu pourrais changer la façon de stocker le titre sans casser les appelants.</li>
+        <li><code>pub mod ticket</code> : le module est public, ce qui permet de l'utiliser depuis un autre crate.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ex" id="ex06">
+    <summary><span class="exid">06</span><span class="extitle">ownership<small><code>self</code> → <code>&amp;self</code></small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+      <div class="two">
+        <div><div class="cap">avant (fourni)</div>
+<pre><code><span class="tk">pub fn</span> title(<span class="tk">self</span>) -&gt; <span class="tt">String</span> {
+    <span class="tk">self</span>.title
+}</code></pre></div>
+        <div><div class="cap">après (ta solution)</div>
+<pre><code><span class="tk">pub fn</span> title(&amp;<span class="tk">self</span>) -&gt; &amp;<span class="tt">str</span> {
+    &amp;<span class="tk">self</span>.title
+}</code></pre></div>
+      </div>
+      <ul>
+        <li><strong>Problème de la version fournie :</strong> chaque getter <strong>consomme</strong> le ticket. Le test appelle <code>title()</code>, puis <code>description()</code>, puis <code>status()</code> sur le même ticket : dès le deuxième appel, <span class="err">E0382</span> use of moved value.</li>
+        <li><strong>Fait :</strong> les trois getters <strong>empruntent</strong> le ticket (<code>&amp;self</code>) et renvoient une <strong>référence</strong> vers le champ (<code>&amp;self.title</code>).</li>
+        <li><strong>Résultat :</strong> l'appelant reste propriétaire ; on peut appeler les getters autant de fois qu'on veut.</li>
+        <li>On ne peut pas renvoyer <code>self.title</code> (un <code>String</code>) depuis <code>&amp;self</code> : ce serait sortir un champ d'un objet qu'on ne possède pas. Il faut renvoyer une référence, ou une copie avec <code>.clone()</code>.</li>
+      </ul>
+      <div class="say"><b>À savoir dire</b>« La signature d'une méthode déclare comment elle utilise son receveur. Avec <code>self</code>, la propriété passe à la méthode et l'appelant perd sa valeur. Avec <code>&amp;self</code>, la méthode emprunte en lecture et l'appelant garde la propriété. Le borrow checker vérifie ce contrat à la compilation. »</div>
+    </div>
+  </details>
+
+  <details class="ex" id="ex07">
+    <summary><span class="exid">07</span><span class="extitle">setters <span class="flag b">getters en &amp;mut</span><small>Références mutables</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">pub fn</span> title(&amp;<span class="tk">self</span>) -&gt; &amp;<span class="tt">String</span> { &amp;<span class="tk">self</span>.title }
+<span class="tk">pub fn</span> description(&amp;<span class="tk">mut self</span>) -&gt; &amp;<span class="tt">String</span> { &amp;<span class="tk">self</span>.description }  <span class="tc">// ⚠️ modifié</span>
+<span class="tk">pub fn</span> status(&amp;<span class="tk">mut self</span>) -&gt; &amp;<span class="tt">String</span> { &amp;<span class="tk">self</span>.status }            <span class="tc">// ⚠️ modifié</span>
+
+<span class="tk">pub fn</span> set_title(&amp;<span class="tk">mut self</span>, new_title: <span class="tt">String</span>) {
+    <span class="tk">if</span> new_title.is_empty() { <span class="tm">panic!</span>(<span class="ts">"Title cannot be empty"</span>); }
+    <span class="tk">if</span> new_title.len() &gt; <span class="tn">50</span> { <span class="tm">panic!</span>(<span class="ts">"Title cannot be longer than 50 bytes"</span>); }
+    <span class="tk">self</span>.title = new_title;
+}
+<span class="tc">// set_description et set_status sur le même modèle</span></code></pre>
+      <ul>
+        <li><strong>Principe :</strong> un setter doit <strong>modifier</strong> le ticket sans le consommer → <code>&amp;mut self</code>. L'appelant doit avoir déclaré <code>let mut ticket</code>.</li>
+        <li><strong>Les setters sont corrects :</strong> ils revalident les mêmes règles que <code>new</code> <em>avant</em> d'affecter. L'invariant reste garanti après modification.</li>
+        <li><code>self.title = new_title;</code> déplace le nouveau <code>String</code> dans le ticket ; l'ancien titre est détruit automatiquement.</li>
+        <li><strong>Deux styles de setters :</strong> <code>&amp;mut self</code> (ta version, on modifie sur place, pas de chaînage) ou <code>mut self … -&gt; Self</code> (on consomme et on rend le ticket, chaînable : <code>ticket.set_title(…).set_status(…)</code>, avec <em>shadowing</em> <code>let ticket = …</code>).</li>
+      </ul>
+      <div class="warn"><b>Problème :</b> <code>description</code> et <code>status</code> sont passés de <code>&amp;self</code> à <code>&amp;mut self</code>. Un getter ne modifie rien, il doit rester en <code>&amp;self</code>. Les tests passent uniquement parce que le test déclare <code>let mut ticket</code> et utilise chaque résultat immédiatement. Dans du vrai code, ça provoque :
+        <ul>
+          <li><span class="err">E0596</span> : impossible de lire la description d'un ticket non <code>mut</code>, ou reçu en <code>&amp;Ticket</code> ;</li>
+          <li><span class="err">E0502</span> : <code>let d = t.description(); let x = t.title(); println!("{d} {x}");</code> est refusé, car <code>d</code> garde un verrou <strong>exclusif</strong> sur tout le ticket.</li>
+        </ul>
+        Remets <code>&amp;self</code> sur les deux getters.</div>
+      <h4>Amélioration suggérée par l'exercice : ne pas dupliquer la validation</h4>
+      <p>Les règles sont écrites deux fois (dans <code>new</code> et dans les setters). Si une règle change, il faut penser à la modifier partout. Le commentaire de l'exercice propose de les extraire dans des fonctions privées :</p>
+<pre><code><span class="tk">fn</span> validate_title(title: &amp;<span class="tt">str</span>) {
+    <span class="tk">if</span> title.is_empty() { <span class="tm">panic!</span>(<span class="ts">"Title cannot be empty"</span>); }
+    <span class="tk">if</span> title.len() &gt; <span class="tn">50</span> { <span class="tm">panic!</span>(<span class="ts">"Title cannot be longer than 50 bytes"</span>); }
+}
+
+<span class="tk">impl</span> <span class="tt">Ticket</span> {
+    <span class="tk">pub fn</span> new(title: <span class="tt">String</span>, description: <span class="tt">String</span>, status: <span class="tt">String</span>) -&gt; <span class="tt">Ticket</span> {
+        validate_title(&amp;title);             <span class="tc">// on PRÊTE le String, il reste à nous</span>
+        validate_description(&amp;description);
+        validate_status(&amp;status);
+        <span class="tt">Ticket</span> { title, description, status }
+    }
+
+    <span class="tk">pub fn</span> set_title(&amp;<span class="tk">mut self</span>, title: <span class="tt">String</span>) {
+        validate_title(&amp;title);
+        <span class="tk">self</span>.title = title;
+    }
+}</code></pre>
+      <p>Note le <code>&amp;title</code> : la fonction de validation n'a besoin que de <strong>lire</strong>, donc on lui prête le texte. Si on lui passait <code>title</code> directement, il serait déplacé et on ne pourrait plus le mettre dans le ticket. Ce code a été compilé et exécuté pour vérification.</p>
+    </div>
+  </details>
+
+  <details class="ex" id="ex08">
+    <summary><span class="exid">08</span><span class="extitle">stack<small>Taille des types sur la pile</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tm">assert_eq!</span>(size_of::&lt;<span class="tt">u16</span>&gt;(), <span class="tn">2</span>);
+<span class="tm">assert_eq!</span>(size_of::&lt;<span class="tt">i32</span>&gt;(), <span class="tn">4</span>);
+<span class="tm">assert_eq!</span>(size_of::&lt;<span class="tt">bool</span>&gt;(), <span class="tn">1</span>);</code></pre>
+      <ul>
+        <li><strong>Demandé :</strong> remplacer les <code>todo!()</code> par la taille en <strong>octets</strong> de chaque type.</li>
+        <li><strong>La règle :</strong> le nombre dans le nom est la taille en <strong>bits</strong>, et 1 octet = 8 bits. <code>u16</code> → 16 ÷ 8 = 2, <code>i32</code> → 32 ÷ 8 = 4.</li>
+        <li><strong>Le piège <code>bool</code> :</strong> 1 bit suffirait (vrai/faux), mais la mémoire s'adresse <strong>octet par octet</strong> : on ne peut pas pointer un bit isolé. Donc 1 octet. Le cours ne le dit pas, il faut le deviner.</li>
+        <li><strong>Pourquoi sur la pile :</strong> ces tailles sont <strong>fixes et connues à la compilation</strong>, donc le compilateur sait d'avance combien de place réserver.</li>
+        <li>Le cours ne donne que l'exemple <code>size_of::&lt;u8&gt;() == 1</code> (<code>book/src/03_ticket_v1/08_stack.md</code>).</li>
+      </ul>
+      <div class="warn"><b>Ce qui t'avait bloqué :</b> les tests échouaient avec <code>not yet implemented</code> parce que le fichier contenait encore les <code>todo!()</code>, faute d'avoir été modifié et enregistré (⌘S). « not yet implemented » = un <code>todo!()</code> s'est exécuté. Les avertissements <code>unreachable expression</code> venaient aussi de <code>todo!()</code>.</div>
+    </div>
+  </details>
+
+  <details class="ex" id="ex09">
+    <summary><span class="exid">09</span><span class="extitle">heap<small>Ce qu'une <code>String</code> garde sur la pile</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tm">assert_eq!</span>(size_of::&lt;<span class="tt">String</span>&gt;(), <span class="tn">24</span>);
+<span class="tm">assert_eq!</span>(size_of::&lt;<span class="tt">Ticket</span>&gt;(), <span class="tn">72</span>);</code></pre>
+      <ul>
+        <li><strong><code>String</code> = 24 :</strong> sur la pile, une <code>String</code> garde 3 <code>usize</code> (pointeur, longueur, capacité). Sur ta machine 64 bits (arm64), un <code>usize</code> fait 8 octets → 3 × 8 = 24.</li>
+        <li><strong><code>Ticket</code> = 72 :</strong> la struct contient 3 <code>String</code> (<code>title</code>, <code>description</code>, <code>status</code>) → 3 × 24 = 72. Les 3 <code>String</code> se lisent dans le code, lignes 1 à 5 du fichier.</li>
+        <li><strong><code>size_of</code> ne compte que la pile.</strong> Le texte sur le tas est une <em>ressource</em> gérée par la <code>String</code>, pas une partie de son type. Que le texte fasse 3 octets ou 3 millions, <code>size_of::&lt;String&gt;()</code> vaut toujours 24.</li>
+      </ul>
+      <div class="warn"><b>Erreur de départ :</b> tu avais mis <code>5</code> en pensant à l'exemple <code>String::with_capacity(5)</code>. Ce 5 est la <strong>capacité sur le tas</strong>, que <code>size_of</code> ne voit pas.</div>
+      <div class="warn"><b>Deux « 3 » à ne pas confondre :</b> 3 <code>usize</code> dans une <code>String</code> (vient du cours) et 3 <code>String</code> dans un <code>Ticket</code> (vient du code).</div>
+    </div>
+  </details>
+
+  <details class="ex" id="ex10">
+    <summary><span class="exid">10</span><span class="extitle">references_in_memory<small>Une référence = une adresse</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tm">assert_eq!</span>(size_of::&lt;&amp;<span class="tt">u16</span>&gt;(), <span class="tn">8</span>);
+<span class="tm">assert_eq!</span>(size_of::&lt;&amp;<span class="tk">mut</span> <span class="tt">u64</span>&gt;(), <span class="tn">8</span>);
+<span class="tm">assert_eq!</span>(size_of::&lt;&amp;<span class="tt">Ticket</span>&gt;(), <span class="tn">8</span>);</code></pre>
+      <ul>
+        <li><strong>Principe :</strong> une référence ne contient pas la valeur, seulement son <strong>adresse</strong>, un <code>usize</code> → 8 octets, quel que soit le type pointé.</li>
+        <li><code>&amp;mut</code> ne change rien à la taille : c'est toujours une adresse.</li>
+        <li><strong>Intérêt :</strong> passer <code>&amp;ticket</code> à une fonction ne déplace que 8 octets, au lieu de copier les 72 du <code>Ticket</code>.</li>
+      </ul>
+      <div class="warn"><b>Erreur de départ :</b> tu avais mis <code>2</code>, <code>4</code> et <code>72</code>, c'est-à-dire la taille de la <strong>valeur pointée</strong> au lieu de celle de la <strong>référence</strong>. (Et même pour la valeur, un <code>u64</code> fait 8 et non 4.)</div>
+      <div class="say"><b>Nuance</b>« Une référence = 8 » vaut pour ta machine 64 bits et pour les types de taille fixe. Certaines références, les <strong>fat pointers</strong> (<code>&amp;str</code>, <code>&amp;[T]</code>), stockent adresse + longueur = 16 octets. Expliqué au chapitre 4 (exos 06 et 08).</div>
+    </div>
+  </details>
+
+  <details class="ex" id="ex11">
+    <summary><span class="exid">11</span><span class="extitle">destructor<small>Portée et <code>drop</code> (rien à coder)</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">fn</span> outro() -&gt; &amp;<span class="tk">'static</span> <span class="tt">str</span> {
+    <span class="ts">"I have a basic understanding of destructors!"</span>
+}</code></pre>
+      <ul>
+        <li><strong>Rien à coder :</strong> le test passe déjà. Le vrai exercice sur <code>Drop</code> arrive au chapitre 4 (exo 13, la DropBomb).</li>
+        <li><strong>Portée :</strong> une variable vit de sa déclaration jusqu'à la fin de son bloc <code>{ }</code>, <strong>ou</strong> jusqu'à ce qu'elle soit déplacée (move).</li>
+        <li><strong>Destructeur :</strong> quand le propriétaire sort de sa portée, Rust appelle <code>drop</code> <strong>automatiquement</strong>, et libère aussi le tas. On n'écrit jamais <code>free</code>.</li>
+        <li><strong>Qui possède nettoie :</strong> passer une valeur à une fonction lui transfère aussi la responsabilité du <code>drop</code>. Un seul propriétaire → libération une seule fois : pas de <em>double free</em>.</li>
+        <li><strong><code>drop(x)</code> à la main</strong> détruit <code>x</code> tout de suite (pour libérer plus tôt). Après, <code>x</code> est inutilisable (<span class="err">E0382</span>, pas de <em>use after free</em>).</li>
+        <li><strong><code>drop</code> sur une référence ne fait rien</strong> (avec un avertissement) : la référence n'est pas propriétaire.</li>
+      </ul>
+<pre><code><span class="tk">fn</span> main() {
+    <span class="tk">let</span> y = <span class="ts">"Hello"</span>.to_string();
+    <span class="tk">let</span> x = <span class="ts">"World"</span>.to_string();
+}   <span class="tc">// Rust insère : drop(x); drop(y);  (ordre inverse de déclaration)</span></code></pre>
+    </div>
+  </details>
+
+  <details class="ex" id="ex12">
+    <summary><span class="exid">12</span><span class="extitle">outro<small>Le type <code>Order</code>, tests d'intégration</small></span><span class="chev" aria-hidden="true">›</span></summary>
+    <div class="exbody">
+<pre><code><span class="tk">pub struct</span> <span class="tt">Order</span> {
+    product_name: <span class="tt">String</span>,
+    quantity: <span class="tt">u32</span>,
+    unit_price: <span class="tt">u32</span>,
+}
+
+<span class="tk">impl</span> <span class="tt">Order</span> {
+    <span class="tk">pub fn</span> new(product_name: <span class="tt">String</span>, quantity: <span class="tt">u32</span>, unit_price: <span class="tt">u32</span>) -&gt; <span class="tt">Order</span> {
+        <span class="tk">if</span> product_name.is_empty() { <span class="tm">panic!</span>(<span class="ts">"Product name cannot be empty"</span>); }
+        <span class="tk">if</span> product_name.len() &gt; <span class="tn">300</span> { <span class="tm">panic!</span>(<span class="ts">"Product name cannot be longer than 300 bytes"</span>); }
+        <span class="tk">if</span> quantity == <span class="tn">0</span> { <span class="tm">panic!</span>(<span class="ts">"Quantity cannot be zero"</span>); }
+        <span class="tk">if</span> unit_price == <span class="tn">0</span> { <span class="tm">panic!</span>(<span class="ts">"Unit price cannot be zero"</span>); }
+        <span class="tt">Order</span> { product_name, quantity, unit_price }
+    }
+
+    <span class="tk">pub fn</span> product_name(&amp;<span class="tk">self</span>) -&gt; &amp;<span class="tt">String</span> { &amp;<span class="tk">self</span>.product_name }
+    <span class="tk">pub fn</span> quantity(&amp;<span class="tk">self</span>) -&gt; &amp;<span class="tt">u32</span> { &amp;<span class="tk">self</span>.quantity }
+    <span class="tk">pub fn</span> unit_price(&amp;<span class="tk">self</span>) -&gt; &amp;<span class="tt">u32</span> { &amp;<span class="tk">self</span>.unit_price }
+    <span class="tk">pub fn</span> total(&amp;<span class="tk">self</span>) -&gt; <span class="tt">u32</span> { <span class="tk">self</span>.quantity * <span class="tk">self</span>.unit_price }
+
+    <span class="tk">pub fn</span> set_quantity(&amp;<span class="tk">mut self</span>, new_quantity: <span class="tt">u32</span>) {
+        <span class="tk">if</span> new_quantity == <span class="tn">0</span> { <span class="tm">panic!</span>(<span class="ts">"Quantity cannot be zero"</span>); }
+        <span class="tk">self</span>.quantity = new_quantity;
+    }
+    <span class="tc">// set_product_name et set_unit_price sur le même modèle</span>
+}</code></pre>
+      <ul>
+        <li><strong>Demandé :</strong> un type <code>Order</code> avec validation, getters, setters et <code>total()</code>, écrit sans aide, dans le style du <code>Ticket</code>.</li>
+        <li><strong>Tests d'intégration :</strong> les tests sont dans <code>tests/integration.rs</code>, en dehors de la crate. Ils ne voient que le <code>pub</code> : struct, <code>new</code>, getters, setters et <code>total</code> doivent être <code>pub</code>. Les champs restent privés.</li>
+        <li><strong>Les getters renvoient une référence</strong> (<code>&amp;u32</code>), parce que le test compare avec <code>&amp;3</code>. Il faut le <code>&amp;</code> <strong>dans la signature</strong> (<code>-&gt; &amp;u32</code>) <strong>et</strong> dans le corps (<code>&amp;self.quantity</code>).</li>
+        <li><strong><code>total()</code> renvoie un <code>u32</code> sans <code>&amp;</code></strong> : c'est un résultat calculé, pas un champ.</li>
+        <li><strong><code>u32</code></strong> pour quantité et prix : jamais négatif, donc il suffit de vérifier <code>== 0</code> (plutôt que <code>&lt;= 0</code>, absurde sur un non signé).</li>
+        <li><strong>Setters :</strong> ils revérifient la règle <em>avant</em> de modifier. Un <code>Order</code> est valide à sa création <strong>et</strong> après chaque modification. C'est pour ça que les champs ne sont pas <code>pub</code> : sinon <code>order.quantity = 0</code> contournerait tout.</li>
+      </ul>
+      <div class="warn"><b>Piège rencontré :</b> le compilateur suggérait « consider removing the borrow » en modifiant le <strong>test</strong> (<code>&amp;3</code> → <code>3</code>). Ne jamais modifier les tests : c'est ton code qui doit s'adapter.</div>
+      <div class="warn"><b>Bonus non traité :</b> <code>quantity * unit_price</code> peut déborder au-delà de ~4,29 milliards (limite d'un <code>u32</code>).</div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ MEMOIRE ============ -->
+<section id="memoire">
+  <h2><span class="num">§6</span>La mémoire : pile, tas, références</h2>
+  <p class="intro">Les exercices 08 à 11 expliquent le <strong>pourquoi</strong> de l'ownership en regardant où vivent les données.</p>
+
+  <h3>Pile et tas</h3>
+  <div class="lock">
+    <div><span class="tag">stack</span><h4>La pile</h4><p>Pour les valeurs de <strong>taille fixe connue à la compilation</strong> (entiers, <code>bool</code>, références, la « fiche » d'une <code>String</code>). Très rapide : on empile à l'appel d'une fonction, on dépile au retour (LIFO).</p></div>
+    <div><span class="tag">heap</span><h4>Le tas</h4><p>Pour les données de <strong>taille variable</strong> (le texte d'une <code>String</code>). On demande de la place à l'<em>allocateur</em>, qui renvoie un pointeur. Plus lent, et il faut libérer : c'est le rôle de <code>drop</code>.</p></div>
+  </div>
+
+  <h3>Une <code>String</code> en mémoire</h3>
+<div class="tree">           <span class="m">s : String (24 octets, toujours)</span>
+      +---------+--------+----------+
+Pile  | pointer | length | capacity |
+      |    |    |   3    |    5     |
+      +----|----+--------+----------+
+           v
+         +---+---+---+---+---+
+Tas      | H | e | y | ? | ? |     <span class="m">← taille variable, invisible pour size_of</span>
+         +---+---+---+---+---+</div>
+  <p><strong>Longueur</strong> = octets de texte utilisés (3). <strong>Capacité</strong> = octets réservés sur le tas (5).</p>
+
+  <h3>Une référence en mémoire</h3>
+<div class="tree">   <span class="m">s : String (24)</span>                      <span class="m">r : &amp;String (8)</span>
++---------+--------+----------+      +---------+
+| pointer | length | capacity |  <span class="u">&lt;---</span>| adresse |
++----|----+--------+----------+      +---------+
+     v
+   [ H | e | y ]</div>
+  <p><code>r</code> est une flèche vers <code>s</code>, pas une copie. Une flèche fait toujours 8 octets.</p>
+
+  <h3>Tableau des tailles (machine 64 bits)</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Type</th><th>Taille</th><th>Pourquoi</th></tr></thead>
+    <tbody>
+      <tr><td><code>bool</code></td><td class="num">1</td><td>plus petite unité adressable</td></tr>
+      <tr><td><code>u8</code> / <code>i8</code></td><td class="num">1</td><td>8 bits</td></tr>
+      <tr><td><code>u16</code> / <code>i16</code></td><td class="num">2</td><td>16 bits</td></tr>
+      <tr><td><code>u32</code> / <code>i32</code></td><td class="num">4</td><td>32 bits</td></tr>
+      <tr><td><code>u64</code> / <code>i64</code> / <code>usize</code></td><td class="num">8</td><td>64 bits</td></tr>
+      <tr><td><code>String</code></td><td class="num">24</td><td>pointeur + longueur + capacité</td></tr>
+      <tr><td><code>Ticket</code></td><td class="num">72</td><td>3 <code>String</code></td></tr>
+      <tr><td><code>&amp;T</code>, <code>&amp;mut T</code></td><td class="num">8</td><td>une adresse</td></tr>
+      <tr><td><code>&amp;str</code></td><td class="num">16</td><td>adresse + longueur (fat pointer, chapitre 4)</td></tr>
+    </tbody>
+  </table></div>
+  <div class="say"><b>À savoir dire</b>« Les valeurs de taille connue à la compilation vivent sur la pile. Les données de taille variable vivent sur le tas, et le type garde sur la pile un pointeur vers elles. Comme chaque valeur a un seul propriétaire, Rust sait exactement quand libérer le tas : à la fin de la portée du propriétaire, via <code>drop</code>. »</div>
+</section>
+
+<!-- ============ ORAL ============ -->
+<section id="oral">
+  <h2><span class="num">§7</span>Questions d'oral</h2>
+  <p class="intro">Réponds à voix haute avant d'ouvrir la réponse.</p>
+  <div class="tools">
+    <button type="button" id="revealAll">Tout révéler</button>
+    <button type="button" id="hideAll">Tout masquer</button>
+  </div>
+  <div class="quiz">
+    <details class="q"><summary>Qu'apporte Rust par rapport à Python d'un côté, et à C de l'autre, sur la mémoire ?</summary><div class="a">Python/Java : sûr et sans gestion manuelle, mais avec un garbage collector. C/C++ : pas de GC, mais gestion manuelle et bugs mémoire possibles. Rust : les trois à la fois (pas de GC, pas de gestion manuelle, pas de bugs mémoire), grâce à l'ownership vérifié à la compilation.</div></details>
+    <details class="q"><summary>Quelles sont les règles de l'ownership ?</summary><div class="a">Chaque valeur a un propriétaire connu à la compilation ; un seul à la fois ; quand il sort de sa portée, la valeur est détruite.</div></details>
+    <details class="q"><summary>Que se passe-t-il exactement quand on appelle <code>ticket.status()</code> avec <code>fn status(self) -&gt; String</code> ?</summary><div class="a">Le ticket est déplacé dans la méthode, qui renvoie le champ <code>status</code> et détruit le reste (<code>title</code>, <code>description</code>). La variable <code>ticket</code> n'est plus utilisable : toute utilisation ultérieure donne E0382.</div></details>
+    <details class="q"><summary>Pourquoi <code>let b = a;</code> puis utiliser <code>a</code> marche avec un <code>u32</code> et pas avec un <code>String</code> ?</summary><div class="a"><code>u32</code> est <code>Copy</code> : la valeur est copiée bit à bit. <code>String</code> possède de la mémoire sur le tas ; le copier implicitement serait coûteux, et partager le même tas entre deux propriétaires provoquerait un double free. La propriété est donc déplacée.</div></details>
+    <details class="q"><summary>Énonce les règles des références.</summary><div class="a">Autant de <code>&amp;T</code> que voulu, OU une seule <code>&amp;mut T</code>, jamais les deux en même temps. Le propriétaire ne peut pas modifier la valeur pendant qu'elle est empruntée. Une référence ne doit pas survivre à la valeur.</div></details>
+    <details class="q"><summary>Jusqu'à quand dure un emprunt ?</summary><div class="a">Jusqu'à la dernière utilisation de la référence, pas forcément jusqu'à la fin du bloc (non-lexical lifetimes).</div></details>
+    <details class="q"><summary>Pourquoi un getter doit-il prendre <code>&amp;self</code> et pas <code>&amp;mut self</code> ?</summary><div class="a">Il ne modifie rien. <code>&amp;mut self</code> exigerait une variable <code>mut</code> (sinon E0596) et poserait un verrou exclusif : impossible de garder la valeur retournée et d'appeler un autre getter en même temps (E0502).</div></details>
+    <details class="q"><summary>Que veut dire <code>&amp;</code> devant une valeur, et devant un type ?</summary><div class="a">Devant une valeur : l'action d'emprunter (<code>&amp;config.version</code>). Devant un type : le type « référence vers » (<code>&amp;u32</code>).</div></details>
+    <details class="q"><summary>Pourquoi ne peut-on pas écrire <code>fn f() -&gt; &amp;String { let s = String::new(); &amp;s }</code> ?</summary><div class="a"><code>s</code> est détruit à la fin de <code>f</code> ; la référence pointerait vers une mémoire libérée (dangling pointer). Le compilateur refuse (E0106 sans lifetime, E0515 « cannot return reference to local variable »). Il faut renvoyer le <code>String</code> lui-même.</div></details>
+    <details class="q"><summary>Explique la règle de visibilité par défaut.</summary><div class="a">Tout est privé. Un élément privé est visible dans son module et dans les sous-modules de ce module. Un parent ou un frère n'y a pas accès sans <code>pub</code> (ou <code>pub(crate)</code>, <code>pub(super)</code>…).</div></details>
+    <details class="q"><summary>À l'exercice 03, pourquoi <code>helpers</code> voit-il <code>Ticket</code> sans <code>pub</code>, alors qu'à l'exercice 04 <code>tests</code> a besoin de <code>pub</code> ?</summary><div class="a">Exercice 03 : <code>Ticket</code> est défini à la racine et <code>helpers</code> est un enfant de la racine. Exercice 04 : <code>Ticket</code> est défini dans <code>ticket</code>, et <code>tests</code> est un frère de <code>ticket</code>, pas un enfant.</div></details>
+    <details class="q"><summary><code>pub struct Ticket</code> rend-il ses champs publics ? Quelles erreurs obtient-on depuis l'extérieur ?</summary><div class="a">Non, chaque champ a sa propre visibilité. Lire un champ privé : E0616. Construire avec <code>Ticket { … }</code> : E0451.</div></details>
+    <details class="q"><summary>Qu'est-ce qu'un invariant, et comment Rust aide-t-il à le garantir ?</summary><div class="a">Une règle toujours vraie sur un objet (« titre non vide »). Champs privés + constructeur et setters publics qui valident : le compilateur interdit tout autre chemin de création ou de modification.</div></details>
+    <details class="q"><summary><code>crate::</code>, <code>super::</code>, <code>use</code> : à quoi servent-ils ?</summary><div class="a"><code>crate::</code> part de la racine du crate, <code>super::</code> du module parent. <code>use</code> met un nom à portée pour ne pas réécrire le chemin.</div></details>
+    <details class="q"><summary>Setter en <code>&amp;mut self</code> ou en <code>mut self -&gt; Self</code> : quelle différence ?</summary><div class="a"><code>&amp;mut self</code> modifie sur place, l'appelant garde le ticket (déclaré <code>mut</code>), mais on ne peut pas chaîner. <code>mut self -&gt; Self</code> consomme le ticket et le rend modifié : chaînable, il faut réaffecter (souvent par shadowing <code>let ticket = …</code>).</div></details>
+    <details class="q"><summary>Pourquoi renvoyer <code>&amp;str</code> plutôt que <code>&amp;String</code> dans un getter ?</summary><div class="a"><code>&amp;str</code> est plus général (n'importe quel texte emprunté) et cache le type de stockage interne. <code>&amp;String</code> se convertit automatiquement en <code>&amp;str</code> (deref coercion).</div></details>
+    <details class="q"><summary>Pourquoi <code>"é".len()</code> vaut-il 2 ?</summary><div class="a">Un <code>String</code> est encodé en UTF-8 et <code>len()</code> compte les octets. « é » occupe 2 octets. Pour compter les caractères : <code>s.chars().count()</code>.</div></details>
+    <details class="q"><summary>Pourquoi <code>size_of::&lt;bool&gt;()</code> vaut 1 et pas « 1 bit » ?</summary><div class="a">La mémoire s'adresse octet par octet : on ne peut pas pointer un bit isolé. Un <code>bool</code> occupe donc un octet entier.</div></details>
+    <details class="q"><summary>Pourquoi <code>size_of::&lt;String&gt;()</code> vaut 24, quel que soit le texte ?</summary><div class="a">Sur la pile, une <code>String</code> ne garde que pointeur + longueur + capacité, trois <code>usize</code> de 8 octets. Le texte est sur le tas, et <code>size_of</code> ne compte que la pile.</div></details>
+    <details class="q"><summary>Combien fait un <code>&amp;Ticket</code> ? Et un <code>Ticket</code> ?</summary><div class="a"><code>&amp;Ticket</code> : 8 octets, une adresse. <code>Ticket</code> : 72 octets, 3 <code>String</code> de 24.</div></details>
+    <details class="q"><summary>Qu'est-ce qui distingue la pile du tas ?</summary><div class="a">Pile : taille connue à la compilation, allocation très rapide (LIFO), libérée au retour de fonction. Tas : taille variable, on passe par l'allocateur, plus lent, et il faut libérer explicitement, ce que Rust fait via <code>drop</code>.</div></details>
+    <details class="q"><summary>Quand Rust appelle-t-il <code>drop</code> ? Faut-il l'écrire ?</summary><div class="a">Automatiquement, quand le propriétaire sort de sa portée (fin du bloc). On ne l'écrit pas. On peut appeler <code>drop(x)</code> à la main pour libérer plus tôt ; sur une référence, ça ne fait rien.</div></details>
+    <details class="q"><summary>Comment l'ownership empêche-t-il le double free ?</summary><div class="a">Il n'y a qu'un propriétaire, donc un seul <code>drop</code>. Passer une valeur à une fonction transfère aussi la responsabilité de la libérer ; l'appelant ne la libère plus.</div></details>
+    <details class="q"><summary>Pourquoi les champs d'<code>Order</code> ne sont-ils pas <code>pub</code>, alors qu'on a des setters ?</summary><div class="a">Avec des champs publics, <code>order.quantity = 0</code> contournerait la validation. Les setters sont le seul chemin de modification, et ils revérifient les règles.</div></details>
+    <details class="q"><summary>Qu'est-ce qu'un test d'intégration, et quelle conséquence sur la visibilité ?</summary><div class="a">Un test placé dans le dossier <code>tests/</code>, qui utilise la crate de l'extérieur, comme un autre projet. Il ne voit que les éléments <code>pub</code>.</div></details>
+  </div>
+</section>
+
+<footer>Fiche construite à partir de ton travail sur <code>exercises/03_ticket_v1</code> (00 à 12, non commité) et du cours <code>book/src/03_ticket_v1</code>. Fiche précédente : <a href="02_basic_calculator.html">02_basic_calculator.html</a> · fiche suivante : <a href="04_traits.html">04_traits.html</a>.</footer>
+</main>
+</div>
+
+<script>
+(function(){
+  var set = function(sel, open){ document.querySelectorAll(sel).forEach(function(d){ d.open = open; }); };
+  document.getElementById('openAll').addEventListener('click', function(){ set('details.ex', true); });
+  document.getElementById('closeAll').addEventListener('click', function(){ set('details.ex', false); });
+  document.getElementById('revealAll').addEventListener('click', function(){ set('details.q', true); });
+  document.getElementById('hideAll').addEventListener('click', function(){ set('details.q', false); });
+  document.querySelectorAll('nav.toc a[href^="#ex"]').forEach(function(a){
+    a.addEventListener('click', function(){
+      var d = document.querySelector(a.getAttribute('href'));
+      if (d && d.tagName === 'DETAILS') d.open = true;
+    });
+  });
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var targets = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (!e.isIntersecting) return;
+        var i = targets.indexOf(e.target);
+        links.forEach(function(l){ l.classList.remove('active'); });
+        if (i >= 0) links[i].classList.add('active');
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    targets.forEach(function(t){ if (t) io.observe(t); });
+  }
+})();
+</script>
+</body>
+</html>

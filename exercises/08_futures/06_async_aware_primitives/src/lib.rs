@@ -4,20 +4,20 @@
 ///  the testing code too, yes).
 ///
 /// Can you understand the sequence of events that can lead to a deadlock?
-use std::sync::mpsc;
+use tokio::sync::mpsc;
 
 pub struct Message {
     payload: String,
-    response_channel: mpsc::Sender<Message>,
+    response_channel: mpsc::UnboundedSender<Message>,
 }
 
 /// Replies with `pong` to any message it receives, setting up a new
 /// channel to continue communicating with the caller.
-pub async fn pong(mut receiver: mpsc::Receiver<Message>) {
+pub async fn pong(mut receiver: mpsc::UnboundedReceiver<Message>) {
     loop {
-        if let Ok(msg) = receiver.recv() {
+        if let Some(msg) = receiver.recv().await {
             println!("Pong received: {}", msg.payload);
-            let (sender, new_receiver) = mpsc::channel();
+            let (sender, new_receiver) = mpsc::unbounded_channel();
             msg.response_channel
                 .send(Message {
                     payload: "pong".into(),
@@ -32,12 +32,12 @@ pub async fn pong(mut receiver: mpsc::Receiver<Message>) {
 #[cfg(test)]
 mod tests {
     use crate::{pong, Message};
-    use std::sync::mpsc;
+    use tokio::sync::mpsc;
 
     #[tokio::test]
     async fn ping() {
-        let (sender, receiver) = mpsc::channel();
-        let (response_sender, response_receiver) = mpsc::channel();
+        let (sender, receiver) = mpsc::unbounded_channel();
+        let (response_sender, mut response_receiver) = mpsc::unbounded_channel();
         sender
             .send(Message {
                 payload: "pong".into(),
@@ -47,7 +47,7 @@ mod tests {
 
         tokio::spawn(pong(receiver));
 
-        let answer = response_receiver.recv().unwrap().payload;
+        let answer = response_receiver.recv().await.unwrap().payload;
         assert_eq!(answer, "pong");
     }
 }

@@ -10,9 +10,13 @@ pub async fn echo(listener: TcpListener) -> Result<(), anyhow::Error> {
         let (socket, _) = listener.accept().await?;
         let mut socket = socket.into_std()?;
         socket.set_nonblocking(false)?;
-        let mut buffer = Vec::new();
-        socket.read_to_end(&mut buffer)?;
-        socket.write_all(&buffer)?;
+        // Les I/O synchrones partent sur le blocking pool
+        // pour ne pas bloquer le runtime
+        tokio::task::spawn_blocking(move || {
+            let mut buffer = Vec::new();
+            socket.read_to_end(&mut buffer).unwrap();
+            socket.write_all(&buffer).unwrap();
+        });
     }
 }
 
